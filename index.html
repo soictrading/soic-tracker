@@ -324,12 +324,92 @@
             color: var(--text);
             border-bottom-color: var(--primary);
         }
+
+        .login-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .login-modal.hidden {
+            display: none;
+        }
+
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-card h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .login-card p {
+            color: var(--secondary);
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .login-card input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 16px;
+            font-family: inherit;
+        }
+
+        .login-card input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .login-error {
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--danger);
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .login-error.show {
+            display: block;
+        }
     </style>
 </head>
 <body>
+    <!-- Login Modal -->
+    <div id="loginModal" class="login-modal">
+        <div class="login-card">
+            <h2>SOIC Tracker</h2>
+            <p>Enter password to continue</p>
+            <div id="loginError" class="login-error"></div>
+            <input type="password" id="passwordInput" placeholder="Password" onkeypress="if(event.key==='Enter') checkPassword()">
+            <button class="btn btn-primary" onclick="checkPassword()" style="width: 100%;">Login</button>
+        </div>
+    </div>
+
     <div class="header">
         <h1>SOIC Interaction Tracker</h1>
         <p>Track conversations, decisions, and action items with your team</p>
+        <button class="btn btn-sm" onclick="logout()" style="background: var(--secondary); margin-top: 12px; font-size: 12px;">Logout</button>
     </div>
 
     <div class="tab-buttons">
@@ -479,12 +559,48 @@
     <script>
         const STORAGE_KEY = 'soic_interactions';
         const PEOPLE_STORAGE_KEY = 'soic_people_notes';
+        const PASSWORD = 'Ssoic$$2026';
         let allInteractions = [];
         let currentPerson = null;
 
-        // Initialize
-        initializeDateInput();
-        loadData();
+        // Check if already authenticated
+        if (sessionStorage.getItem('soicAuthenticated') !== 'true') {
+            document.getElementById('loginModal').classList.remove('hidden');
+        } else {
+            document.getElementById('loginModal').classList.add('hidden');
+        }
+
+        function checkPassword() {
+            const passwordInput = document.getElementById('passwordInput').value;
+            const errorEl = document.getElementById('loginError');
+            
+            if (passwordInput === PASSWORD) {
+                sessionStorage.setItem('soicAuthenticated', 'true');
+                document.getElementById('loginModal').classList.add('hidden');
+                passwordInput.value = '';
+                errorEl.classList.remove('show');
+                initializeDateInput();
+                loadData();
+            } else {
+                errorEl.textContent = 'Incorrect password. Try again.';
+                errorEl.classList.add('show');
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordInput').focus();
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('soicAuthenticated');
+            document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordInput').focus();
+        }
+
+        // Initialize only if authenticated
+        if (sessionStorage.getItem('soicAuthenticated') === 'true') {
+            initializeDateInput();
+            loadData();
+        }
 
         function initializeDateInput() {
             const dateInput = document.getElementById('dateTime');
