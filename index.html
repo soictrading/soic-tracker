@@ -547,75 +547,99 @@
 
         function loadOpportunities() {
             const container = document.getElementById('opportunitiesList');
-            const opportunities = {};
+            const themes = {};
             
-            // Parse interactions for opportunities
+            // Define opportunity themes with keywords
+            const opportunityThemes = [
+                {
+                    name: 'Customer Visibility & Order Tracking',
+                    type: 'Need',
+                    keywords: /visibility|order status|where orders are|track.*order|status update|visibility into|knowing what|what.*happening/i
+                },
+                {
+                    name: 'Automated Pricing Tool',
+                    type: 'Automation/Tooling',
+                    keywords: /pricing.*tool|automat.*pric|pric.*complicated|pric.*convoluted|pricing is.*complex/i
+                },
+                {
+                    name: 'Centralized Information Management',
+                    type: 'Need',
+                    keywords: /all.*info.*one place|consolidat|centrali|one system|single place|everything in|all data|one dashboard/i
+                },
+                {
+                    name: 'Supply-Demand Matching',
+                    type: 'Pain Point',
+                    keywords: /supply.*demand|find.*demand|find.*buyer|have.*tonnage|inventory|unsold.*supply|excess.*supply/i
+                },
+                {
+                    name: 'Customer Need Specification Data',
+                    type: 'Need',
+                    keywords: /know who need what|customer.*need|specification|what.*customer.*want|customer requirement/i
+                },
+                {
+                    name: 'Product Specification Details',
+                    type: 'Simplification',
+                    keywords: /product detail|width.*roll|gsm|missing.*info|specification|product info|missing.*detail/i
+                },
+                {
+                    name: 'Real-Time Order Updates to Customers',
+                    type: 'Automation/Tooling',
+                    keywords: /customer update|send.*update|notif|email.*buyer|alert.*order|late.*order.*notif/i
+                },
+                {
+                    name: 'Pricing Import/Comparison Data',
+                    type: 'Need',
+                    keywords: /data.*sur|import.*data|pricing.*data|compare.*pricing|market.*data|what.*people.*paying/i
+                },
+                {
+                    name: 'Delivery Reliability',
+                    type: 'Pain Point',
+                    keywords: /dont deliver on time|late|delivery issue|on-time|carman|mill.*problem/i
+                },
+                {
+                    name: 'Quick Pricing Calculation',
+                    type: 'Need',
+                    keywords: /define.*cost|cost.*calculation|percentages|insurance|freight|profit.*margin|pricing.*formula/i
+                }
+            ];
+            
+            // Map interactions to themes
             allInteractions.forEach(interaction => {
-                const discussion = interaction.discussion.toLowerCase();
+                const discussion = interaction.discussion;
                 const person = interaction.personName;
                 
-                // Keywords that indicate an opportunity
-                const keywords = [
-                    { pattern: /would be great to have|would be amazing to|would like|needs|wants|requires/gi, label: 'Need' },
-                    { pattern: /problem|pain|struggle|difficult|challenge|issue/gi, label: 'Pain Point' },
-                    { pattern: /convoluted|complex|complicated|confusing/gi, label: 'Simplification' },
-                    { pattern: /automat|tool|visibility|visibility into|tracking/gi, label: 'Automation/Tooling' }
-                ];
-                
-                let foundOpportunities = [];
-                
-                keywords.forEach(kw => {
-                    if (kw.pattern.test(discussion)) {
-                        // Extract relevant sentence(s)
-                        const sentences = interaction.discussion.split(/[\.\n]/);
-                        sentences.forEach(sentence => {
-                            if (kw.pattern.test(sentence.toLowerCase())) {
-                                const trimmed = sentence.trim();
-                                if (trimmed && trimmed.length > 10) {
-                                    foundOpportunities.push({
-                                        text: trimmed,
-                                        type: kw.label,
-                                        person: person,
-                                        date: interaction.dateTime
-                                    });
-                                }
-                            }
-                        });
-                    }
-                });
-                
-                foundOpportunities.forEach(opp => {
-                    const key = opp.text;
-                    if (!opportunities[key]) {
-                        opportunities[key] = {
-                            text: opp.text,
-                            type: opp.type,
-                            people: new Set(),
-                            lastMentioned: opp.date
-                        };
-                    }
-                    opportunities[key].people.add(opp.person);
-                    // Update lastMentioned if this is newer
-                    if (opp.date > opportunities[key].lastMentioned) {
-                        opportunities[key].lastMentioned = opp.date;
+                opportunityThemes.forEach(theme => {
+                    if (theme.keywords.test(discussion)) {
+                        if (!themes[theme.name]) {
+                            themes[theme.name] = {
+                                name: theme.name,
+                                type: theme.type,
+                                people: new Set(),
+                                count: 0
+                            };
+                        }
+                        themes[theme.name].people.add(person);
                     }
                 });
             });
             
-            const opportunityList = Object.values(opportunities);
+            // Update counts
+            Object.values(themes).forEach(theme => {
+                theme.count = theme.people.size;
+            });
             
-            if (opportunityList.length === 0) {
+            const themeList = Object.values(themes);
+            
+            if (themeList.length === 0) {
                 container.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1;"><p>No opportunities identified yet. As you log more interactions, themes will appear here.</p></div>';
                 return;
             }
             
-            // Sort by type and date
+            // Sort by count (descending), then by type
             const typeOrder = { 'Need': 1, 'Pain Point': 2, 'Simplification': 3, 'Automation/Tooling': 4 };
-            opportunityList.sort((a, b) => {
-                if (typeOrder[a.type] !== typeOrder[b.type]) {
-                    return typeOrder[a.type] - typeOrder[b.type];
-                }
-                return b.lastMentioned.localeCompare(a.lastMentioned);
+            themeList.sort((a, b) => {
+                if (b.count !== a.count) return b.count - a.count;
+                return typeOrder[a.type] - typeOrder[b.type];
             });
             
             const typeColors = {
@@ -625,15 +649,15 @@
                 'Automation/Tooling': { bg: 'rgba(34, 197, 94, 0.1)', border: '#22c55e', text: '#166534' }
             };
             
-            container.innerHTML = opportunityList.map(opp => {
-                const colors = typeColors[opp.type];
-                const peopleList = Array.from(opp.people).join(', ');
+            container.innerHTML = themeList.map(theme => {
+                const colors = typeColors[theme.type];
+                const pluralPeople = theme.count === 1 ? 'person' : 'people';
                 return `
                     <div style="background: ${colors.bg}; border: 2px solid ${colors.border}; border-radius: 8px; padding: 16px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                        <div style="color: ${colors.text}; font-weight: 600; font-size: 12px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">${opp.type}</div>
-                        <div style="color: var(--text); font-size: 14px; line-height: 1.5; margin-bottom: 12px;">${opp.text}</div>
-                        <div style="font-size: 12px; color: var(--secondary);">
-                            <strong>Mentioned by:</strong> ${peopleList}
+                        <div style="color: ${colors.text}; font-weight: 600; font-size: 12px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">${theme.type}</div>
+                        <div style="color: var(--text); font-size: 15px; font-weight: 600; line-height: 1.5; margin-bottom: 12px;">${theme.name}</div>
+                        <div style="font-size: 13px; color: var(--secondary); background: rgba(0,0,0,0.05); padding: 8px 12px; border-radius: 4px; text-align: center;">
+                            <strong style="font-size: 16px; color: ${colors.text};">${theme.count}</strong> ${pluralPeople}
                         </div>
                     </div>
                 `;
