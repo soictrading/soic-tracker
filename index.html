@@ -335,7 +335,7 @@
     <div class="tab-buttons">
         <button class="tab-btn active" onclick="switchTab('log')">Log Interaction</button>
         <button class="tab-btn" onclick="switchTab('people')">People Directory</button>
-        <button class="tab-btn" onclick="switchTab('import')">Import Data</button>
+        <button class="tab-btn" onclick="switchTab('opportunities')">Opportunities</button>
     </div>
 
     <!-- Log Interaction Tab -->
@@ -460,27 +460,18 @@
         </div>
     </div>
 
-    <!-- Import Data Tab -->
-    <div id="importTab" style="display: none;">
+    <!-- Opportunities Tab -->
+    <div id="opportunitiesTab" style="display: none;">
         <div class="container">
-            <div class="panel">
-                <h2>🔄 Import Data</h2>
-                <p style="color: var(--secondary); margin-bottom: 16px; font-size: 14px;">Paste your data from the old tracker below and click Import.</p>
+            <div class="panel" style="grid-column: 1 / -1;">
+                <h2>💡 Opportunities</h2>
+                <p style="color: var(--secondary); margin-bottom: 20px; font-size: 14px;">Things people are saying they need, want, or struggle with.</p>
                 
-                <div id="importStatus" class="status-message"></div>
-                
-                <div class="form-group">
-                    <label>Interactions Data (JSON)</label>
-                    <textarea id="interactionsImport" placeholder="Paste interactions JSON here..." style="min-height: 120px; font-family: monospace; font-size: 12px;"></textarea>
+                <div id="opportunitiesList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <p>No opportunities logged yet</p>
+                    </div>
                 </div>
-                
-                <div class="form-group">
-                    <label>People Notes Data (JSON)</label>
-                    <textarea id="notesImport" placeholder="Paste people notes JSON here..." style="min-height: 80px; font-family: monospace; font-size: 12px;"></textarea>
-                </div>
-                
-                <button class="btn btn-primary" onclick="importData()">Import All Data</button>
-                <button class="btn btn-sm" style="background: var(--secondary); margin-left: 8px;" onclick="document.getElementById('interactionsImport').value = ''; document.getElementById('notesImport').value = '';">Clear</button>
             </div>
         </div>
     </div>
@@ -554,59 +545,99 @@
             }
         }
 
-        function importData() {
-            const importStatus = document.getElementById('importStatus');
-            const interactionsText = document.getElementById('interactionsImport').value.trim();
-            const notesText = document.getElementById('notesImport').value.trim();
+        function loadOpportunities() {
+            const container = document.getElementById('opportunitiesList');
+            const opportunities = {};
             
-            try {
-                let imported = false;
+            // Parse interactions for opportunities
+            allInteractions.forEach(interaction => {
+                const discussion = interaction.discussion.toLowerCase();
+                const person = interaction.personName;
                 
-                // Import interactions
-                if (interactionsText) {
-                    const newInteractions = JSON.parse(interactionsText);
-                    if (Array.isArray(newInteractions)) {
-                        allInteractions = allInteractions.concat(newInteractions);
-                        imported = true;
+                // Keywords that indicate an opportunity
+                const keywords = [
+                    { pattern: /would be great to have|would be amazing to|would like|needs|wants|requires/gi, label: 'Need' },
+                    { pattern: /problem|pain|struggle|difficult|challenge|issue/gi, label: 'Pain Point' },
+                    { pattern: /convoluted|complex|complicated|confusing/gi, label: 'Simplification' },
+                    { pattern: /automat|tool|visibility|visibility into|tracking/gi, label: 'Automation/Tooling' }
+                ];
+                
+                let foundOpportunities = [];
+                
+                keywords.forEach(kw => {
+                    if (kw.pattern.test(discussion)) {
+                        // Extract relevant sentence(s)
+                        const sentences = interaction.discussion.split(/[\.\n]/);
+                        sentences.forEach(sentence => {
+                            if (kw.pattern.test(sentence.toLowerCase())) {
+                                const trimmed = sentence.trim();
+                                if (trimmed && trimmed.length > 10) {
+                                    foundOpportunities.push({
+                                        text: trimmed,
+                                        type: kw.label,
+                                        person: person,
+                                        date: interaction.dateTime
+                                    });
+                                }
+                            }
+                        });
                     }
-                }
+                });
                 
-                // Import people notes
-                if (notesText) {
-                    const newNotes = JSON.parse(notesText);
-                    const existingNotes = JSON.parse(localStorage.getItem(PEOPLE_STORAGE_KEY) || '{}');
-                    const mergedNotes = { ...existingNotes, ...newNotes };
-                    localStorage.setItem(PEOPLE_STORAGE_KEY, JSON.stringify(mergedNotes));
-                    imported = true;
-                }
-                
-                if (!imported) {
-                    importStatus.textContent = '✗ Please paste data in at least one field';
-                    importStatus.className = 'status-message error';
-                    return;
-                }
-                
-                // Save and refresh
-                saveData();
-                loadData();
-                updateStats(allInteractions);
-                updatePersonList();
-                renderInteractions(allInteractions);
-                
-                // Clear form
-                document.getElementById('interactionsImport').value = '';
-                document.getElementById('notesImport').value = '';
-                
-                importStatus.textContent = '✓ Data imported successfully! Check the other tabs.';
-                importStatus.className = 'status-message success';
-                setTimeout(() => {
-                    importStatus.className = 'status-message';
-                }, 3000);
-            } catch (e) {
-                importStatus.textContent = '✗ Invalid JSON format. Check your data and try again.';
-                importStatus.className = 'status-message error';
-                console.error('Import error:', e);
+                foundOpportunities.forEach(opp => {
+                    const key = opp.text;
+                    if (!opportunities[key]) {
+                        opportunities[key] = {
+                            text: opp.text,
+                            type: opp.type,
+                            people: new Set(),
+                            lastMentioned: opp.date
+                        };
+                    }
+                    opportunities[key].people.add(opp.person);
+                    // Update lastMentioned if this is newer
+                    if (opp.date > opportunities[key].lastMentioned) {
+                        opportunities[key].lastMentioned = opp.date;
+                    }
+                });
+            });
+            
+            const opportunityList = Object.values(opportunities);
+            
+            if (opportunityList.length === 0) {
+                container.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1;"><p>No opportunities identified yet. As you log more interactions, themes will appear here.</p></div>';
+                return;
             }
+            
+            // Sort by type and date
+            const typeOrder = { 'Need': 1, 'Pain Point': 2, 'Simplification': 3, 'Automation/Tooling': 4 };
+            opportunityList.sort((a, b) => {
+                if (typeOrder[a.type] !== typeOrder[b.type]) {
+                    return typeOrder[a.type] - typeOrder[b.type];
+                }
+                return b.lastMentioned.localeCompare(a.lastMentioned);
+            });
+            
+            const typeColors = {
+                'Need': { bg: 'rgba(59, 130, 246, 0.1)', border: '#3b82f6', text: '#1e40af' },
+                'Pain Point': { bg: 'rgba(239, 68, 68, 0.1)', border: '#ef4444', text: '#991b1b' },
+                'Simplification': { bg: 'rgba(168, 85, 247, 0.1)', border: '#a855f7', text: '#6b21a8' },
+                'Automation/Tooling': { bg: 'rgba(34, 197, 94, 0.1)', border: '#22c55e', text: '#166534' }
+            };
+            
+            container.innerHTML = opportunityList.map(opp => {
+                const colors = typeColors[opp.type];
+                const peopleList = Array.from(opp.people).join(', ');
+                return `
+                    <div style="background: ${colors.bg}; border: 2px solid ${colors.border}; border-radius: 8px; padding: 16px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <div style="color: ${colors.text}; font-weight: 600; font-size: 12px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">${opp.type}</div>
+                        <div style="color: var(--text); font-size: 14px; line-height: 1.5; margin-bottom: 12px;">${opp.text}</div>
+                        <div style="font-size: 12px; color: var(--secondary);">
+                            <strong>Mentioned by:</strong> ${peopleList}
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function addInteraction() {
@@ -748,25 +779,26 @@
         function switchTab(tab) {
             const logTab = document.getElementById('logTab');
             const peopleTab = document.getElementById('peopleTab');
-            const importTab = document.getElementById('importTab');
+            const opportunitiesTab = document.getElementById('opportunitiesTab');
             const buttons = document.querySelectorAll('.tab-btn');
 
             if (tab === 'log') {
                 logTab.style.display = '';
                 peopleTab.style.display = 'none';
-                importTab.style.display = 'none';
+                opportunitiesTab.style.display = 'none';
                 buttons.forEach((b, i) => b.classList.toggle('active', i === 0));
             } else if (tab === 'people') {
                 logTab.style.display = 'none';
                 peopleTab.style.display = '';
-                importTab.style.display = 'none';
+                opportunitiesTab.style.display = 'none';
                 buttons.forEach((b, i) => b.classList.toggle('active', i === 1));
                 loadPeopleDirectory();
-            } else if (tab === 'import') {
+            } else if (tab === 'opportunities') {
                 logTab.style.display = 'none';
                 peopleTab.style.display = 'none';
-                importTab.style.display = '';
+                opportunitiesTab.style.display = '';
                 buttons.forEach((b, i) => b.classList.toggle('active', i === 2));
+                loadOpportunities();
             }
         }
 
