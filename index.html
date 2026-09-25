@@ -549,57 +549,43 @@
             const container = document.getElementById('opportunitiesList');
             const themes = {};
             
-            // Define opportunity themes with keywords
+            // Define opportunity themes with keywords and descriptions
             const opportunityThemes = [
                 {
-                    name: 'Customer Visibility & Order Tracking',
+                    name: 'Order & Customer Visibility Platform',
                     type: 'Need',
-                    keywords: /visibility|order status|where orders are|track.*order|status update|visibility into|knowing what|what.*happening/i
+                    description: 'Real-time visibility into order status, inventory, and customer communications. Sales need to see where orders are in the system and get automatic updates to share with customers.',
+                    keywords: /visibility|order status|where orders are|track.*order|status update|visibility into|knowing what|what.*happening|send.*update|notif|email.*buyer|alert.*order/i
                 },
                 {
                     name: 'Automated Pricing Tool',
                     type: 'Automation/Tooling',
-                    keywords: /pricing.*tool|automat.*pric|pric.*complicated|pric.*convoluted|pricing is.*complex/i
+                    description: 'System to automatically calculate pricing including insurance, freight, profit margins, and other variables. Currently prices are manually calculated and complex.',
+                    keywords: /pricing.*tool|automat.*pric|pric.*complicated|pric.*convoluted|pricing is.*complex|define.*cost|cost.*calculation|percentages|insurance|freight|profit.*margin|pricing.*formula/i
                 },
                 {
-                    name: 'Centralized Information Management',
+                    name: 'Centralized Customer & Product Database',
                     type: 'Need',
-                    keywords: /all.*info.*one place|consolidat|centrali|one system|single place|everything in|all data|one dashboard/i
+                    description: 'Single source of truth for customer specifications, needs, historical orders, and product details. Currently information is scattered across emails, spreadsheets, and systems.',
+                    keywords: /all.*info.*one place|consolidat|centrali|one system|single place|everything in|all data|one dashboard|customer need|specification|what.*customer.*want|product detail|width.*roll|gsm|missing.*info/i
                 },
                 {
                     name: 'Supply-Demand Matching',
                     type: 'Pain Point',
+                    description: 'When sales have available inventory and tonnage, they lack a way to quickly find potential customers or matches. Leads to unsold supply sitting idle.',
                     keywords: /supply.*demand|find.*demand|find.*buyer|have.*tonnage|inventory|unsold.*supply|excess.*supply/i
                 },
                 {
-                    name: 'Customer Need Specification Data',
+                    name: 'Market Pricing & Import Data',
                     type: 'Need',
-                    keywords: /know who need what|customer.*need|specification|what.*customer.*want|customer requirement/i
-                },
-                {
-                    name: 'Product Specification Details',
-                    type: 'Simplification',
-                    keywords: /product detail|width.*roll|gsm|missing.*info|specification|product info|missing.*detail/i
-                },
-                {
-                    name: 'Real-Time Order Updates to Customers',
-                    type: 'Automation/Tooling',
-                    keywords: /customer update|send.*update|notif|email.*buyer|alert.*order|late.*order.*notif/i
-                },
-                {
-                    name: 'Pricing Import/Comparison Data',
-                    type: 'Need',
+                    description: 'Access to market pricing data, competitor pricing, and import data (e.g., Data Sur integration). Sales need to understand market rates and what others are paying.',
                     keywords: /data.*sur|import.*data|pricing.*data|compare.*pricing|market.*data|what.*people.*paying/i
                 },
                 {
-                    name: 'Delivery Reliability',
+                    name: 'Delivery Reliability & Operations Visibility',
                     type: 'Pain Point',
-                    keywords: /dont deliver on time|late|delivery issue|on-time|carman|mill.*problem/i
-                },
-                {
-                    name: 'Quick Pricing Calculation',
-                    type: 'Need',
-                    keywords: /define.*cost|cost.*calculation|percentages|insurance|freight|profit.*margin|pricing.*formula/i
+                    description: 'Current delivery issues and mill/supplier problems cause late orders. Sales and customers lack visibility into why delays happen or when orders will arrive.',
+                    keywords: /dont deliver on time|late|delivery issue|on-time|carman|mill.*problem|operations/i
                 }
             ];
             
@@ -614,18 +600,13 @@
                             themes[theme.name] = {
                                 name: theme.name,
                                 type: theme.type,
-                                people: new Set(),
-                                count: 0
+                                description: theme.description,
+                                people: new Set()
                             };
                         }
                         themes[theme.name].people.add(person);
                     }
                 });
-            });
-            
-            // Update counts
-            Object.values(themes).forEach(theme => {
-                theme.count = theme.people.size;
             });
             
             const themeList = Object.values(themes);
@@ -638,7 +619,9 @@
             // Sort by count (descending), then by type
             const typeOrder = { 'Need': 1, 'Pain Point': 2, 'Simplification': 3, 'Automation/Tooling': 4 };
             themeList.sort((a, b) => {
-                if (b.count !== a.count) return b.count - a.count;
+                const countA = a.people.size;
+                const countB = b.people.size;
+                if (countB !== countA) return countB - countA;
                 return typeOrder[a.type] - typeOrder[b.type];
             });
             
@@ -651,13 +634,15 @@
             
             container.innerHTML = themeList.map(theme => {
                 const colors = typeColors[theme.type];
-                const pluralPeople = theme.count === 1 ? 'person' : 'people';
+                const count = theme.people.size;
+                const pluralPeople = count === 1 ? 'person' : 'people';
                 return `
                     <div style="background: ${colors.bg}; border: 2px solid ${colors.border}; border-radius: 8px; padding: 16px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
                         <div style="color: ${colors.text}; font-weight: 600; font-size: 12px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">${theme.type}</div>
-                        <div style="color: var(--text); font-size: 15px; font-weight: 600; line-height: 1.5; margin-bottom: 12px;">${theme.name}</div>
+                        <div style="color: var(--text); font-size: 15px; font-weight: 600; line-height: 1.5; margin-bottom: 8px;">${theme.name}</div>
+                        <div style="color: var(--secondary); font-size: 13px; line-height: 1.6; margin-bottom: 12px;">${theme.description}</div>
                         <div style="font-size: 13px; color: var(--secondary); background: rgba(0,0,0,0.05); padding: 8px 12px; border-radius: 4px; text-align: center;">
-                            <strong style="font-size: 16px; color: ${colors.text};">${theme.count}</strong> ${pluralPeople}
+                            <strong style="font-size: 16px; color: ${colors.text};">${count}</strong> ${pluralPeople} mentioned this
                         </div>
                     </div>
                 `;
