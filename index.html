@@ -335,6 +335,7 @@
     <div class="tab-buttons">
         <button class="tab-btn active" onclick="switchTab('log')">Log Interaction</button>
         <button class="tab-btn" onclick="switchTab('people')">People Directory</button>
+        <button class="tab-btn" onclick="switchTab('import')">Import Data</button>
     </div>
 
     <!-- Log Interaction Tab -->
@@ -459,6 +460,31 @@
         </div>
     </div>
 
+    <!-- Import Data Tab -->
+    <div id="importTab" style="display: none;">
+        <div class="container">
+            <div class="panel">
+                <h2>🔄 Import Data</h2>
+                <p style="color: var(--secondary); margin-bottom: 16px; font-size: 14px;">Paste your data from the old tracker below and click Import.</p>
+                
+                <div id="importStatus" class="status-message"></div>
+                
+                <div class="form-group">
+                    <label>Interactions Data (JSON)</label>
+                    <textarea id="interactionsImport" placeholder="Paste interactions JSON here..." style="min-height: 120px; font-family: monospace; font-size: 12px;"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>People Notes Data (JSON)</label>
+                    <textarea id="notesImport" placeholder="Paste people notes JSON here..." style="min-height: 80px; font-family: monospace; font-size: 12px;"></textarea>
+                </div>
+                
+                <button class="btn btn-primary" onclick="importData()">Import All Data</button>
+                <button class="btn btn-sm" style="background: var(--secondary); margin-left: 8px;" onclick="document.getElementById('interactionsImport').value = ''; document.getElementById('notesImport').value = '';">Clear</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const STORAGE_KEY = 'soic_interactions';
         const PEOPLE_STORAGE_KEY = 'soic_people_notes';
@@ -525,6 +551,61 @@
             } catch (e) {
                 console.error('Error saving data:', e);
                 throw e;
+            }
+        }
+
+        function importData() {
+            const importStatus = document.getElementById('importStatus');
+            const interactionsText = document.getElementById('interactionsImport').value.trim();
+            const notesText = document.getElementById('notesImport').value.trim();
+            
+            try {
+                let imported = false;
+                
+                // Import interactions
+                if (interactionsText) {
+                    const newInteractions = JSON.parse(interactionsText);
+                    if (Array.isArray(newInteractions)) {
+                        allInteractions = allInteractions.concat(newInteractions);
+                        imported = true;
+                    }
+                }
+                
+                // Import people notes
+                if (notesText) {
+                    const newNotes = JSON.parse(notesText);
+                    const existingNotes = JSON.parse(localStorage.getItem(PEOPLE_STORAGE_KEY) || '{}');
+                    const mergedNotes = { ...existingNotes, ...newNotes };
+                    localStorage.setItem(PEOPLE_STORAGE_KEY, JSON.stringify(mergedNotes));
+                    imported = true;
+                }
+                
+                if (!imported) {
+                    importStatus.textContent = '✗ Please paste data in at least one field';
+                    importStatus.className = 'status-message error';
+                    return;
+                }
+                
+                // Save and refresh
+                saveData();
+                loadData();
+                updateStats(allInteractions);
+                updatePersonList();
+                renderInteractions(allInteractions);
+                
+                // Clear form
+                document.getElementById('interactionsImport').value = '';
+                document.getElementById('notesImport').value = '';
+                
+                importStatus.textContent = '✓ Data imported successfully! Check the other tabs.';
+                importStatus.className = 'status-message success';
+                setTimeout(() => {
+                    importStatus.className = 'status-message';
+                }, 3000);
+            } catch (e) {
+                importStatus.textContent = '✗ Invalid JSON format. Check your data and try again.';
+                importStatus.className = 'status-message error';
+                console.error('Import error:', e);
             }
         }
 
