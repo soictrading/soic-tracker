@@ -518,7 +518,7 @@
                 </div>
             </div>
 
-            <div class="panel" id="personDetailsPanel" style="display: none;">
+            <div class="panel" id="personDetailsPanel" style="display: none; overflow-y: auto; max-height: calc(100vh - 200px);">
                 <h2 id="personName"></h2>
                 
                 <div class="form-group">
@@ -528,7 +528,7 @@
 
                 <div id="personInteractionsSummary" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
                     <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">All Interactions</h3>
-                    <div id="personInteractionsList" style="font-size: 13px; line-height: 1.6; max-height: 800px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 12px;">
+                    <div id="personInteractionsList" style="font-size: 13px; line-height: 1.6; max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 12px;">
                     </div>
                 </div>
 
@@ -1029,7 +1029,7 @@
                     return `
                         <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
                             <div style="font-weight: 600; color: var(--text);">${date} - ${i.contactMethod}</div>
-                            <div style="color: var(--secondary); white-space: pre-wrap; margin-top: 4px;">${i.discussion.substring(0, 150)}${i.discussion.length > 150 ? '...' : ''}</div>
+                            <div style="color: var(--secondary); white-space: pre-wrap; margin-top: 4px; max-height: 150px; overflow-y: auto;">${i.discussion}</div>
                         </div>
                     `;
                 }).join('');
