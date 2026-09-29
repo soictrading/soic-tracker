@@ -312,18 +312,44 @@
         }
 
         async function loadData() {
+            const CACHE_KEY = 'soic_cache';
+
+            // Show loading state
+            const intList = document.getElementById('interactionsList');
+            const peopleListEl = document.getElementById('peopleList');
+            if (intList) intList.innerHTML = "<div class='empty-state'><p>Loading your data...</p></div>";
+            if (peopleListEl) peopleListEl.innerHTML = "<div class='empty-state'><p>Loading...</p></div>";
+
+            // Load from cache instantly if available
+            const cached = sessionStorage.getItem(CACHE_KEY);
+            if (cached) {
+                try {
+                    allInteractions = JSON.parse(cached);
+                    renderInteractions(allInteractions);
+                    updateStats(allInteractions);
+                    updatePersonList();
+                } catch(e) {
+                    sessionStorage.removeItem(CACHE_KEY);
+                }
+            }
+
+            // Always fetch fresh data from API in background
             try {
                 const res = await fetch(API_URL + '/interactions');
                 if (!res.ok) throw new Error('HTTP ' + res.status);
-                allInteractions = await res.json();
-                if (!Array.isArray(allInteractions)) allInteractions = [];
+                const fresh = await res.json();
+                if (!Array.isArray(fresh)) throw new Error('Invalid response');
+                allInteractions = fresh;
+                sessionStorage.setItem(CACHE_KEY, JSON.stringify(allInteractions));
                 renderInteractions(allInteractions);
                 updateStats(allInteractions);
                 updatePersonList();
             } catch (e) {
                 console.error('Error loading data:', e);
-                showStatus('Error loading data: ' + e.message, 'error');
-                allInteractions = [];
+                if (!cached) {
+                    showStatus('Error loading data: ' + e.message, 'error');
+                    allInteractions = [];
+                }
             }
         }
 
@@ -361,7 +387,7 @@
                         '<div class="detail-section"><div class="detail-label">Discussion</div><div class="detail-content">' + (i.discussion || '') + '</div></div>' +
                         (i.decisions ? '<div class="detail-section"><div class="detail-label">Key Decisions</div><div class="detail-content">' + i.decisions + '</div></div>' : '') +
                         (i.actionItems ? '<div class="detail-section"><div class="detail-label">Action Items</div><div class="detail-content">' + i.actionItems + '</div></div>' : '') +
-                        '<div class="interaction-actions"><button class="btn btn-sm btn-danger" onclick="deleteInteraction(event, '' + i.id + '')">Delete</button></div>' +
+                        '<div class="interaction-actions"><button class="btn btn-sm btn-danger" onclick="deleteInteraction(event, this.dataset.id)" data-id="' + i.id + '">Delete</button></div>' +
                     '</div>' +
                 '</div>';
             }).join('');
@@ -408,6 +434,7 @@
                 });
                 if (!res.ok) throw new Error('Save failed: ' + res.status);
                 allInteractions.push(interaction);
+                sessionStorage.setItem('soic_cache', JSON.stringify(allInteractions));
                 document.getElementById('interactionForm').reset();
                 initializeDateInput();
                 renderInteractions(allInteractions);
@@ -426,6 +453,7 @@
                 const res = await fetch(API_URL + '/interactions/' + id, { method: 'DELETE' });
                 if (!res.ok) throw new Error('Delete failed');
                 allInteractions = allInteractions.filter(function(i) { return i.id !== id && String(i.id) !== String(id); });
+                sessionStorage.setItem('soic_cache', JSON.stringify(allInteractions));
                 renderInteractions(allInteractions);
                 updateStats(allInteractions);
                 updatePersonList();
@@ -470,7 +498,7 @@
                     const notes = peopleNotes[person] || '';
                     const last = ints.sort(function(a, b) { return new Date(b.dateTime) - new Date(a.dateTime); })[0];
                     const lastDate = last ? new Date(last.dateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Never';
-                    return '<div class="interaction-item" onclick="openPerson('' + person.replace(/'/g, "\'") + '')">' +
+                    return '<div class="interaction-item" data-person="' + person.replace(/"/g, '&quot;') + '" onclick="openPerson(this.dataset.person)">' +
                         '<div class="interaction-header">' +
                             '<div>' +
                                 '<div class="interaction-person">' + person + '</div>' +
@@ -502,7 +530,7 @@
                     const notes = peopleNotes[person] || '';
                     const last = ints.sort(function(a, b) { return new Date(b.dateTime) - new Date(a.dateTime); })[0];
                     const lastDate = last ? new Date(last.dateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Never';
-                    return '<div class="interaction-item" onclick="openPerson('' + person.replace(/'/g, "\'") + '')">' +
+                    return '<div class="interaction-item" data-person="' + person.replace(/"/g, '&quot;') + '" onclick="openPerson(this.dataset.person)">' +
                         '<div class="interaction-header">' +
                             '<div>' +
                                 '<div class="interaction-person">' + person + '</div>' +
