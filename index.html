@@ -562,14 +562,44 @@
                 document.getElementById('personNotes').value = peopleNotes[person] || '';
                 document.getElementById('personInteractionsList').innerHTML = ints.map(function(i) {
                     const date = new Date(i.dateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                    return '<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">' +
-                        '<div style="font-weight:600;color:var(--text);">' + date + ' - ' + i.contactMethod + '</div>' +
-                        '<div style="color:var(--secondary);white-space:pre-wrap;margin-top:4px;max-height:400px;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:4px;padding:8px;">' + (i.discussion || '') + '</div>' +
+                    return '<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);" data-id="' + i.id + '">' +
+                        '<div style="font-weight:600;color:var(--text);margin-bottom:6px;">' + date + ' - ' + i.contactMethod + '</div>' +
+                        '<textarea style="width:100%;min-height:120px;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;color:var(--secondary);resize:vertical;white-space:pre-wrap;">' + (i.discussion || '') + '</textarea>' +
+                        '<button onclick="saveInteractionEdit(this)" style="margin-top:6px;padding:6px 14px;background:var(--primary);color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Save</button>' +
+                        '<span style="margin-left:10px;font-size:12px;color:var(--success);display:none;" class="save-confirm">✓ Saved</span>' +
                     '</div>';
                 }).join('');
                 document.getElementById('personDetailsPanel').style.display = '';
             } catch (e) {
                 console.error('Error opening person:', e);
+            }
+        }
+
+        async function saveInteractionEdit(btn) {
+            const container = btn.closest('[data-id]');
+            const id = container.dataset.id;
+            const textarea = container.querySelector('textarea');
+            const confirm = container.querySelector('.save-confirm');
+            const discussion = textarea.value;
+
+            try {
+                const interaction = allInteractions.find(function(i) { return String(i.id) === String(id); });
+                const res = await fetch(API_URL + '/interactions/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        discussion: discussion,
+                        decisions: interaction ? interaction.decisions : '',
+                        actionItems: interaction ? interaction.actionItems : ''
+                    })
+                });
+                if (!res.ok) throw new Error('Save failed');
+                if (interaction) interaction.discussion = discussion;
+                sessionStorage.setItem('soic_cache', JSON.stringify(allInteractions));
+                confirm.style.display = 'inline';
+                setTimeout(function() { confirm.style.display = 'none'; }, 2000);
+            } catch (e) {
+                alert('Error saving: ' + e.message);
             }
         }
 
