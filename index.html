@@ -121,14 +121,15 @@
         #addPersonModal.hidden { display: none; }
 
         /* OPPORTUNITIES */
-        .opp-card { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 14px; }
-        .opp-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
-        .opp-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 12px; margin-bottom: 10px; font-weight: 600; }
+        .opp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+        .opp-card { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+        .opp-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; line-height: 1.4; }
+        .opp-badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 12px; margin-bottom: 8px; font-weight: 600; }
         .opp-need { background: rgba(37,99,235,0.1); color: var(--primary); }
         .opp-pain { background: rgba(220,38,38,0.1); color: var(--danger); }
         .opp-auto { background: rgba(22,163,74,0.1); color: var(--success); }
-        .opp-desc { font-size: 14px; color: var(--secondary); line-height: 1.6; margin-bottom: 8px; }
-        .opp-people { font-size: 12px; color: var(--secondary); }
+        .opp-desc { font-size: 12px; color: var(--secondary); line-height: 1.5; margin-bottom: 8px; }
+        .opp-people { font-size: 11px; color: var(--secondary); border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px; }
 
         /* STATUS */
         .status-bar { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; display: none; }
@@ -270,7 +271,7 @@
         "Jose Esparza",
         "Juan Andres Jimenez Rendon",
         "Lars Von Borstel",
-        "Paola Munoz",
+        "Paola Muñoz",
         "Pedro",
         "Sebastian Barrientos"
     ];
@@ -379,7 +380,10 @@
                         "<div class=\"person-name\">" + name + "</div>" +
                         "<div class=\"person-meta\">" + ints.length + " interaction" + (ints.length !== 1 ? "s" : "") + " &middot; Last: " + lastDate + "</div>" +
                     "</div>" +
-                    "<span class=\"person-chevron\">&#9660;</span>" +
+                    "<div style=\"display:flex;align-items:center;gap:12px;\">" +
+                        "<button class=\"btn btn-danger btn-sm\" onclick=\"deletePerson(event, '" + escAttr(name) + "')\">Delete</button>" +
+                        "<span class=\"person-chevron\">&#9660;</span>" +
+                    "</div>" +
                 "</div>" +
                 "<div class=\"person-body\" id=\"body-" + safeid(name) + "\">" +
                     "<div class=\"person-notes-label\">Notes</div>" +
@@ -640,15 +644,33 @@
             return;
         }
 
-        container.innerHTML = "<h2 style=\"font-size:18px;font-weight:600;margin-bottom:16px;\">Top Opportunities</h2>" +
+        container.innerHTML = "<h2 style=\"font-size:18px;font-weight:600;margin-bottom:16px;\">Top Opportunities</h2><div class=\"opp-grid\">" +
             results.map(function(r) {
                 return "<div class=\"opp-card\">" +
                     "<div class=\"opp-title\">" + r.theme.title + "</div>" +
                     "<span class=\"opp-badge " + r.theme.badge + "\">" + r.theme.label + "</span>" +
                     "<div class=\"opp-desc\">" + r.theme.desc + "</div>" +
-                    "<div class=\"opp-people\">Mentioned in " + r.count + " interaction" + (r.count !== 1 ? "s" : "") + " &mdash; " + r.people.join(", ") + "</div>" +
+                    "<div class=\"opp-people\">" + r.count + " mention" + (r.count !== 1 ? "s" : "") + " &mdash; " + r.people.join(", ") + "</div>" +
                 "</div>";
-            }).join("");
+            }).join("") + "</div>";
+    }
+
+    async function deletePerson(event, name) {
+        event.stopPropagation();
+        if (!confirm("Delete " + name + "? This will not delete their interactions.")) return;
+        delete allPeople[name];
+        try {
+            await fetch(API + "/people", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(allPeople)
+            });
+            sessionStorage.setItem(PEOPLE_KEY, JSON.stringify(allPeople));
+            renderPeople();
+            showStatus(name + " removed.", "success");
+        } catch(e) {
+            showStatus("Error removing person: " + e.message, "error");
+        }
     }
 
     // EXPORT
