@@ -587,9 +587,6 @@
             addInteraction();
         });
 
-        // Filter listeners
-        document.getElementById('searchFilter').addEventListener('input', filterInteractions);
-        document.getElementById('methodFilter').addEventListener('change', filterInteractions);
         document.getElementById('peopleSearch').addEventListener('input', filterPeople);
 
         function showStatus(message, type = 'success') {
@@ -605,9 +602,9 @@
             try {
                 const response = await fetch(`${API_URL}/interactions`);
                 allInteractions = await response.json();
-                renderInteractions(allInteractions);
                 updateStats(allInteractions);
                 updatePersonList();
+                loadPeopleDirectory();
                 loadOpportunities();
             } catch (e) {
                 console.error('Error loading data:', e);
@@ -767,6 +764,7 @@
                 renderInteractions(allInteractions);
                 updateStats(allInteractions);
                 updatePersonList();
+                loadPeopleDirectory();
                 loadOpportunities();
                 showStatus('✓ Interaction logged successfully!');
             } catch (e) {
@@ -777,6 +775,7 @@
 
         function renderInteractions(interactions) {
             const container = document.getElementById('interactionsList');
+            if (!container) return;
             
             if (interactions.length === 0) {
                 container.innerHTML = '<div class="empty-state"><p>No interactions found</p></div>';
@@ -787,15 +786,8 @@
 
             container.innerHTML = sorted.map(i => {
                 const date = new Date(i.dateTime);
-                const formattedDate = date.toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    day: 'numeric',
-                    year: 'numeric'
-                });
-                const formattedTime = date.toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+                const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const formattedTime = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
                 return `
                     <div class="interaction-item" onclick="toggleExpand(this, ${i.id})">
@@ -806,24 +798,13 @@
                                 <div class="interaction-method">${i.contactMethod}</div>
                             </div>
                         </div>
-                        
                         <div class="interaction-details">
                             <div class="detail-section">
                                 <div class="detail-label">Discussion</div>
                                 <div class="detail-content">${i.discussion}</div>
                             </div>
-                            ${i.decisions ? `
-                                <div class="detail-section">
-                                    <div class="detail-label">Key Decisions</div>
-                                    <div class="detail-content">${i.decisions}</div>
-                                </div>
-                            ` : ''}
-                            ${i.actionItems ? `
-                                <div class="detail-section">
-                                    <div class="detail-label">Action Items & Next Steps</div>
-                                    <div class="detail-content">${i.actionItems}</div>
-                                </div>
-                            ` : ''}
+                            ${i.decisions ? `<div class="detail-section"><div class="detail-label">Key Decisions</div><div class="detail-content">${i.decisions}</div></div>` : ''}
+                            ${i.actionItems ? `<div class="detail-section"><div class="detail-label">Action Items & Next Steps</div><div class="detail-content">${i.actionItems}</div></div>` : ''}
                             <div class="interaction-actions">
                                 <button class="btn btn-sm btn-danger" onclick="deleteInteraction(event, ${i.id})">Delete</button>
                             </div>
@@ -854,9 +835,9 @@
                     if (!response.ok) throw new Error('Failed to delete');
 
                     allInteractions = allInteractions.filter(i => i.id !== id);
-                    renderInteractions(allInteractions);
                     updateStats(allInteractions);
                     updatePersonList();
+                    loadPeopleDirectory();
                     loadOpportunities();
                     showStatus('✓ Interaction deleted');
                 } catch (e) {
@@ -866,22 +847,26 @@
         }
 
         function updateStats(interactions) {
-            document.getElementById('totalCount').textContent = interactions.length;
+            const totalEl = document.getElementById('totalCount');
+            const peopleEl = document.getElementById('peopleCount');
             const uniquePeople = new Set(interactions.map(i => i.personName)).size;
-            document.getElementById('peopleCount').textContent = uniquePeople;
+            if (totalEl) totalEl.textContent = interactions.length;
+            if (peopleEl) peopleEl.textContent = uniquePeople;
         }
 
         function filterInteractions() {
-            const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
-            const methodFilter = document.getElementById('methodFilter').value;
+            const searchEl = document.getElementById('searchFilter');
+            const methodEl = document.getElementById('methodFilter');
+            if (!searchEl || !methodEl) return;
+            const searchTerm = searchEl.value.toLowerCase();
+            const methodFilter = methodEl.value;
 
             const filtered = allInteractions.filter(i => {
                 const matchesSearch = !searchTerm || 
                     i.personName.toLowerCase().includes(searchTerm) ||
                     i.discussion.toLowerCase().includes(searchTerm) ||
-                    i.decisions.toLowerCase().includes(searchTerm) ||
-                    i.actionItems.toLowerCase().includes(searchTerm);
-                
+                    (i.decisions || '').toLowerCase().includes(searchTerm) ||
+                    (i.actionItems || '').toLowerCase().includes(searchTerm);
                 const matchesMethod = !methodFilter || i.contactMethod === methodFilter;
                 return matchesSearch && matchesMethod;
             });
