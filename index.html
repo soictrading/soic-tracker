@@ -414,7 +414,7 @@
 
     <div class="tab-buttons">
         <button class="tab-btn active" onclick="switchTab('log')">Log Interaction</button>
-        <button class="tab-btn" onclick="switchTab('people')">People Directory</button>
+        <button class="tab-btn" onclick="switchTab('interactions')">Interactions</button>
         <button class="tab-btn" onclick="switchTab('opportunities')">Opportunities</button>
     </div>
 
@@ -468,6 +468,43 @@
             </div>
 
             <div class="panel">
+                <h2>People Directory</h2>
+                <div class="filters">
+                    <input type="text" class="filter-input" id="peopleSearch" placeholder="Search people..." style="flex: 1;">
+                </div>
+                <div class="interactions-list" id="peopleList" style="max-height: 800px;">
+                    <div class="empty-state">
+                        <p>No people added yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel" id="personDetailsPanel" style="display: none; overflow-y: auto; max-height: calc(100vh - 200px); grid-column: 2;">
+                <h2 id="personName"></h2>
+                
+                <div class="form-group">
+                    <label>Personal Details & Notes</label>
+                    <textarea id="personNotes" placeholder="Family, background, interests, preferences, important dates, etc..."></textarea>
+                </div>
+
+                <div id="personInteractionsSummary" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">All Interactions</h3>
+                    <div id="personInteractionsList" style="font-size: 13px; line-height: 1.6; max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 12px;">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button class="btn btn-primary" style="flex: 1;" onclick="savePersonNotes()">Save Notes</button>
+                    <button class="btn btn-sm btn-danger" onclick="closePerson()">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactions Tab -->
+    <div id="interactionsTab" style="display: none;">
+        <div class="container">
+            <div class="panel" style="grid-column: 1 / -1;">
                 <h2>Interactions</h2>
                 
                 <div class="stats">
@@ -503,43 +540,6 @@
         </div>
     </div>
 
-    <!-- People Directory Tab -->
-    <div id="peopleTab" style="display: none;">
-        <div class="container">
-            <div class="panel">
-                <h2>People Directory</h2>
-                <div class="filters">
-                    <input type="text" class="filter-input" id="peopleSearch" placeholder="Search people..." style="flex: 1;">
-                </div>
-                <div class="interactions-list" id="peopleList" style="max-height: 800px;">
-                    <div class="empty-state">
-                        <p>No people added yet</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="panel" id="personDetailsPanel" style="display: none; overflow-y: auto; max-height: calc(100vh - 200px);">
-                <h2 id="personName"></h2>
-                
-                <div class="form-group">
-                    <label>Personal Details & Notes</label>
-                    <textarea id="personNotes" placeholder="Family, background, interests, preferences, important dates, etc..."></textarea>
-                </div>
-
-                <div id="personInteractionsSummary" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
-                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">All Interactions</h3>
-                    <div id="personInteractionsList" style="font-size: 13px; line-height: 1.6; max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 12px;">
-                    </div>
-                </div>
-
-                <div style="display: flex; gap: 12px; margin-top: 20px;">
-                    <button class="btn btn-primary" style="flex: 1;" onclick="savePersonNotes()">Save Notes</button>
-                    <button class="btn btn-sm btn-danger" onclick="closePerson()">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Opportunities Tab -->
     <div id="opportunitiesTab" style="display: none;">
         <div class="container">
@@ -557,8 +557,7 @@
     </div>
 
     <script>
-        const STORAGE_KEY = 'soic_interactions';
-        const PEOPLE_STORAGE_KEY = 'soic_people_notes';
+        const API_URL = 'https://patient-lake-be1f.mike-chartrand.workers.dev';
         const PASSWORD = 'Ssoic$$2026';
         let allInteractions = [];
         let currentPerson = null;
@@ -568,6 +567,7 @@
             document.getElementById('loginModal').classList.remove('hidden');
         } else {
             document.getElementById('loginModal').classList.add('hidden');
+            initApp();
         }
 
         function checkPassword() {
@@ -579,8 +579,7 @@
                 document.getElementById('loginModal').classList.add('hidden');
                 passwordInput.value = '';
                 errorEl.classList.remove('show');
-                initializeDateInput();
-                loadData();
+                initApp();
             } else {
                 errorEl.textContent = 'Incorrect password. Try again.';
                 errorEl.classList.add('show');
@@ -596,10 +595,18 @@
             document.getElementById('passwordInput').focus();
         }
 
-        // Initialize only if authenticated
-        if (sessionStorage.getItem('soicAuthenticated') === 'true') {
+        async function initApp() {
+            await initializeDatabase();
             initializeDateInput();
-            loadData();
+            await loadData();
+        }
+
+        async function initializeDatabase() {
+            try {
+                await fetch(`${API_URL}/init`);
+            } catch (e) {
+                console.error('DB init error:', e);
+            }
         }
 
         function initializeDateInput() {
@@ -633,13 +640,14 @@
             }, 3000);
         }
 
-        function loadData() {
+        async function loadData() {
             try {
-                const data = localStorage.getItem(STORAGE_KEY);
-                allInteractions = data ? JSON.parse(data) : [];
+                const response = await fetch(`${API_URL}/interactions`);
+                allInteractions = await response.json();
                 renderInteractions(allInteractions);
                 updateStats(allInteractions);
                 updatePersonList();
+                loadOpportunities();
             } catch (e) {
                 console.error('Error loading data:', e);
                 allInteractions = [];
@@ -652,9 +660,13 @@
             datalist.innerHTML = uniquePeople.map(person => `<option value="${person}">`).join('');
         }
 
-        function saveData() {
+        async function saveData() {
             try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(allInteractions));
+                await fetch(`${API_URL}/interactions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(allInteractions)
+                });
             } catch (e) {
                 console.error('Error saving data:', e);
                 throw e;
@@ -765,7 +777,7 @@
             }).join('');
         }
 
-        function addInteraction() {
+        async function addInteraction() {
             const interaction = {
                 id: Date.now(),
                 personName: document.getElementById('personName').value.trim(),
@@ -777,8 +789,16 @@
             };
 
             try {
+                // Save to API
+                const response = await fetch(`${API_URL}/interactions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(interaction)
+                });
+
+                if (!response.ok) throw new Error('Failed to save');
+
                 allInteractions.push(interaction);
-                saveData();
 
                 document.getElementById('interactionForm').reset();
                 initializeDateInput();
@@ -786,11 +806,11 @@
                 renderInteractions(allInteractions);
                 updateStats(allInteractions);
                 updatePersonList();
+                loadOpportunities();
                 showStatus('✓ Interaction logged successfully!');
             } catch (e) {
                 showStatus('✗ Error saving: ' + e.message, 'error');
                 console.error('Error:', e);
-                allInteractions.pop();
             }
         }
 
@@ -861,15 +881,22 @@
             element.classList.toggle('expanded');
         }
 
-        function deleteInteraction(event, id) {
+        async function deleteInteraction(event, id) {
             event.stopPropagation();
             if (confirm('Delete this interaction?')) {
                 try {
+                    // Delete from API
+                    const response = await fetch(`${API_URL}/interactions/${id}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (!response.ok) throw new Error('Failed to delete');
+
                     allInteractions = allInteractions.filter(i => i.id !== id);
-                    saveData();
                     renderInteractions(allInteractions);
                     updateStats(allInteractions);
                     updatePersonList();
+                    loadOpportunities();
                     showStatus('✓ Interaction deleted');
                 } catch (e) {
                     showStatus('✗ Error deleting: ' + e.message, 'error');
@@ -903,31 +930,32 @@
 
         function switchTab(tab) {
             const logTab = document.getElementById('logTab');
-            const peopleTab = document.getElementById('peopleTab');
+            const interactionsTab = document.getElementById('interactionsTab');
             const opportunitiesTab = document.getElementById('opportunitiesTab');
             const buttons = document.querySelectorAll('.tab-btn');
 
             if (tab === 'log') {
                 logTab.style.display = '';
-                peopleTab.style.display = 'none';
+                interactionsTab.style.display = 'none';
                 opportunitiesTab.style.display = 'none';
                 buttons.forEach((b, i) => b.classList.toggle('active', i === 0));
-            } else if (tab === 'people') {
+                loadPeopleDirectory();
+            } else if (tab === 'interactions') {
                 logTab.style.display = 'none';
-                peopleTab.style.display = '';
+                interactionsTab.style.display = '';
                 opportunitiesTab.style.display = 'none';
                 buttons.forEach((b, i) => b.classList.toggle('active', i === 1));
-                loadPeopleDirectory();
+                renderInteractions(allInteractions);
             } else if (tab === 'opportunities') {
                 logTab.style.display = 'none';
-                peopleTab.style.display = 'none';
+                interactionsTab.style.display = 'none';
                 opportunitiesTab.style.display = '';
                 buttons.forEach((b, i) => b.classList.toggle('active', i === 2));
                 loadOpportunities();
             }
         }
 
-        function loadPeopleDirectory() {
+        async function loadPeopleDirectory() {
             const uniquePeople = [...new Set(allInteractions.map(i => i.personName))].sort();
             const container = document.getElementById('peopleList');
             
@@ -937,8 +965,9 @@
             }
 
             try {
-                const peopleNotesData = localStorage.getItem(PEOPLE_STORAGE_KEY);
-                const peopleNotes = peopleNotesData ? JSON.parse(peopleNotesData) : {};
+                // Fetch people notes from API
+                const response = await fetch(`${API_URL}/people`);
+                const peopleNotes = await response.json();
 
                 container.innerHTML = uniquePeople.map(person => {
                     const personInteractions = allInteractions.filter(i => i.personName === person);
@@ -964,7 +993,7 @@
             }
         }
 
-        function filterPeople() {
+        async function filterPeople() {
             const searchTerm = document.getElementById('peopleSearch').value.toLowerCase();
             const uniquePeople = [...new Set(allInteractions.map(i => i.personName))].sort();
             const filtered = uniquePeople.filter(p => p.toLowerCase().includes(searchTerm));
@@ -977,8 +1006,9 @@
             }
 
             try {
-                const peopleNotesData = localStorage.getItem(PEOPLE_STORAGE_KEY);
-                const peopleNotes = peopleNotesData ? JSON.parse(peopleNotesData) : {};
+                // Fetch people notes from API
+                const response = await fetch(`${API_URL}/people`);
+                const peopleNotes = await response.json();
                 
                 container.innerHTML = filtered.map(person => {
                     const personInteractions = allInteractions.filter(i => i.personName === person);
@@ -1004,7 +1034,7 @@
             }
         }
 
-        function openPerson(person) {
+        async function openPerson(person) {
             currentPerson = person;
             const personInteractions = allInteractions.filter(i => i.personName === person).sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
 
@@ -1017,8 +1047,9 @@
             });
 
             try {
-                const peopleNotesData = localStorage.getItem(PEOPLE_STORAGE_KEY);
-                const peopleNotes = peopleNotesData ? JSON.parse(peopleNotesData) : {};
+                // Fetch people notes from API
+                const response = await fetch(`${API_URL}/people`);
+                const peopleNotes = await response.json();
 
                 document.getElementById('personName').textContent = person;
                 document.getElementById('personNotes').value = peopleNotes[person] || '';
@@ -1029,7 +1060,7 @@
                     return `
                         <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
                             <div style="font-weight: 600; color: var(--text);">${date} - ${i.contactMethod}</div>
-                            <div style="color: var(--secondary); white-space: pre-wrap; margin-top: 4px; max-height: 150px; overflow-y: auto;">${i.discussion}</div>
+                            <div style="color: var(--secondary); white-space: pre-wrap; margin-top: 4px; max-height: 150px; overflow-y: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border); border-radius: 4px; padding: 8px;">${i.discussion}</div>
                         </div>
                     `;
                 }).join('');
@@ -1041,11 +1072,13 @@
             }
         }
 
-        function savePersonNotes() {
+        async function savePersonNotes() {
             try {
                 const notes = document.getElementById('personNotes').value.trim();
-                const peopleNotesData = localStorage.getItem(PEOPLE_STORAGE_KEY);
-                const peopleNotes = peopleNotesData ? JSON.parse(peopleNotesData) : {};
+                
+                // Fetch current people notes
+                const response = await fetch(`${API_URL}/people`);
+                const peopleNotes = await response.json();
                 
                 if (notes) {
                     peopleNotes[currentPerson] = notes;
@@ -1053,8 +1086,14 @@
                     delete peopleNotes[currentPerson];
                 }
                 
-                localStorage.setItem(PEOPLE_STORAGE_KEY, JSON.stringify(peopleNotes));
-                loadPeopleDirectory();
+                // Save to API
+                await fetch(`${API_URL}/people`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(peopleNotes)
+                });
+
+                await loadPeopleDirectory();
                 showStatus('✓ Notes saved!');
             } catch (e) {
                 showStatus('✗ Error saving notes: ' + e.message, 'error');
