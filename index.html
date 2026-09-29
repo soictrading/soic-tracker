@@ -414,7 +414,6 @@
 
     <div class="tab-buttons">
         <button class="tab-btn active" onclick="switchTab('log')">Log Interaction</button>
-        <button class="tab-btn" onclick="switchTab('interactions')">Interactions</button>
         <button class="tab-btn" onclick="switchTab('opportunities')">Opportunities</button>
     </div>
 
@@ -502,44 +501,6 @@
     </div>
 
     <!-- Interactions Tab -->
-    <div id="interactionsTab" style="display: none;">
-        <div class="container">
-            <div class="panel" style="grid-column: 1 / -1;">
-                <h2>Interactions</h2>
-                
-                <div class="stats">
-                    <div class="stat">
-                        <div class="stat-value" id="totalCount">0</div>
-                        <div>Total logged</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-value" id="peopleCount">0</div>
-                        <div>People</div>
-                    </div>
-                </div>
-
-                <div class="filters">
-                    <input type="text" class="filter-input" id="searchFilter" placeholder="Search by name, discussion, decisions...">
-                    <select class="filter-input" id="methodFilter" style="flex: 0.5; min-width: auto;">
-                        <option value="">All methods</option>
-                        <option value="email">Email</option>
-                        <option value="call">Call</option>
-                        <option value="chat">Chat</option>
-                        <option value="meeting">In-person Meeting</option>
-                        <option value="video">Video Call</option>
-                    </select>
-                </div>
-
-                <div class="interactions-list" id="interactionsList">
-                    <div class="empty-state">
-                        <p>No interactions logged yet</p>
-                        <p>Start by logging your first conversation →</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Opportunities Tab -->
     <div id="opportunitiesTab" style="display: none;">
         <div class="container">
@@ -930,27 +891,18 @@
 
         function switchTab(tab) {
             const logTab = document.getElementById('logTab');
-            const interactionsTab = document.getElementById('interactionsTab');
             const opportunitiesTab = document.getElementById('opportunitiesTab');
             const buttons = document.querySelectorAll('.tab-btn');
 
             if (tab === 'log') {
                 logTab.style.display = '';
-                interactionsTab.style.display = 'none';
                 opportunitiesTab.style.display = 'none';
                 buttons.forEach((b, i) => b.classList.toggle('active', i === 0));
                 loadPeopleDirectory();
-            } else if (tab === 'interactions') {
-                logTab.style.display = 'none';
-                interactionsTab.style.display = '';
-                opportunitiesTab.style.display = 'none';
-                buttons.forEach((b, i) => b.classList.toggle('active', i === 1));
-                renderInteractions(allInteractions);
             } else if (tab === 'opportunities') {
                 logTab.style.display = 'none';
-                interactionsTab.style.display = 'none';
                 opportunitiesTab.style.display = '';
-                buttons.forEach((b, i) => b.classList.toggle('active', i === 2));
+                buttons.forEach((b, i) => b.classList.toggle('active', i === 1));
                 loadOpportunities();
             }
         }
