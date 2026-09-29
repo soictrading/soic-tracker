@@ -3,664 +3,693 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOIC Interaction Tracker</title>
+    <title>SOIC Tracker</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
-            --primary: #2563eb; --primary-dark: #1e40af; --secondary: #64748b;
-            --success: #16a34a; --danger: #dc2626; --border: #e2e8f0;
-            --bg-light: #f8fafc; --text: #1e293b;
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary: #64748b;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --border: #e2e8f0;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --white: #ffffff;
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-light); color: var(--text); padding: 20px; max-width: 1200px; margin: 0 auto; }
-        .header { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-        .header h1 { font-size: 28px; margin-bottom: 8px; }
-        .header p { color: var(--secondary); font-size: 14px; }
-        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
-        @media (max-width: 1024px) { .container { grid-template-columns: 1fr; } }
-        .panel { background: white; border-radius: 8px; padding: 24px; border: 1px solid var(--border); }
-        .panel h2 { font-size: 18px; margin-bottom: 20px; color: var(--text); }
-        .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
-        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; color: var(--text); }
-        .form-group textarea { resize: vertical; min-height: 80px; }
-        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-        .btn-primary { background: var(--primary); color: white; width: 100%; padding: 12px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        /* LOGIN */
+        #loginOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        #loginOverlay.hidden { display: none; }
+        .login-box { background: var(--white); border-radius: 12px; padding: 40px; width: 320px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .login-box h2 { font-size: 22px; margin-bottom: 6px; }
+        .login-box p { color: var(--secondary); font-size: 13px; margin-bottom: 24px; }
+        .login-error { color: var(--danger); font-size: 13px; margin-bottom: 12px; display: none; }
+        .login-error.show { display: block; }
+
+        /* HEADER */
+        header { background: var(--white); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { font-size: 20px; font-weight: 700; }
+        header p { font-size: 13px; color: var(--secondary); margin-top: 2px; }
+        .header-btns { display: flex; gap: 10px; }
+
+        /* TABS */
+        .tabs { background: var(--white); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; }
+        .tab-btn { padding: 14px 20px; border: none; background: none; font-size: 14px; font-weight: 500; color: var(--secondary); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-btn:hover { color: var(--text); }
+
+        /* CONTENT */
+        .tab-content { display: none; padding: 24px; max-width: 900px; margin: 0 auto; }
+        .tab-content.active { display: block; }
+
+        /* PEOPLE LIST */
+        .people-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .people-header h2 { font-size: 18px; font-weight: 600; }
+
+        .person-card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+        .person-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; cursor: pointer; user-select: none; transition: background 0.15s; }
+        .person-header:hover { background: #f1f5f9; }
+        .person-header.open { background: #eff6ff; border-bottom: 1px solid var(--border); }
+        .person-name { font-weight: 600; font-size: 15px; }
+        .person-meta { font-size: 12px; color: var(--secondary); margin-top: 2px; }
+        .person-chevron { color: var(--secondary); font-size: 18px; transition: transform 0.2s; }
+        .person-header.open .person-chevron { transform: rotate(180deg); }
+
+        .person-body { display: none; padding: 16px 20px; }
+        .person-body.open { display: block; }
+
+        .person-notes-label { font-size: 12px; font-weight: 600; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+        .person-notes { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 13px; resize: vertical; min-height: 60px; color: var(--text); }
+        .person-notes:focus { outline: none; border-color: var(--primary); }
+        .notes-save-row { display: flex; justify-content: flex-end; margin-top: 6px; margin-bottom: 16px; }
+
+        .interactions-label { font-size: 12px; font-weight: 600; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+
+        /* INTERACTION ITEMS */
+        .interaction-card { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; overflow: hidden; }
+        .interaction-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; cursor: pointer; background: var(--bg); transition: background 0.15s; }
+        .interaction-header:hover { background: #e8f0fe; }
+        .interaction-header.open { background: #dbeafe; border-bottom: 1px solid var(--border); }
+        .interaction-title { font-size: 13px; font-weight: 600; }
+        .interaction-method { font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(37,99,235,0.1); color: var(--primary); }
+        .interaction-chevron { color: var(--secondary); font-size: 14px; transition: transform 0.2s; }
+        .interaction-header.open .interaction-chevron { transform: rotate(180deg); }
+
+        .interaction-body { display: none; padding: 14px; }
+        .interaction-body.open { display: block; }
+        .interaction-field-label { font-size: 11px; font-weight: 600; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; margin-top: 12px; }
+        .interaction-field-label:first-child { margin-top: 0; }
+        .interaction-textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 13px; resize: vertical; min-height: 80px; color: var(--text); }
+        .interaction-textarea:focus { outline: none; border-color: var(--primary); }
+        .interaction-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+        .save-confirm { font-size: 12px; color: var(--success); display: none; }
+        .save-confirm.show { display: inline; }
+
+        /* BUTTONS */
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+        .btn-primary { background: var(--primary); color: white; }
         .btn-primary:hover { background: var(--primary-dark); }
         .btn-sm { padding: 6px 12px; font-size: 12px; }
         .btn-danger { background: var(--danger); color: white; }
         .btn-danger:hover { background: #b91c1c; }
-        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-        .stat { background: var(--bg-light); border-radius: 6px; padding: 16px; text-align: center; }
-        .stat-value { font-size: 28px; font-weight: 700; color: var(--primary); }
-        .stat div:last-child { font-size: 12px; color: var(--secondary); margin-top: 4px; }
-        .filters { display: flex; gap: 12px; margin-bottom: 16px; }
-        .filter-input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; font-family: inherit; }
-        .interactions-list { display: flex; flex-direction: column; gap: 8px; max-height: 600px; overflow-y: auto; }
-        .interaction-item { background: var(--bg-light); border: 1px solid var(--border); border-radius: 6px; padding: 12px; cursor: pointer; transition: all 0.2s; }
-        .interaction-item:hover { border-color: var(--primary); }
-        .interaction-item.expanded { background: white; border-color: var(--primary); }
-        .interaction-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-        .interaction-person { font-weight: 700; color: var(--text); }
-        .interaction-date { font-size: 12px; color: var(--secondary); }
-        .interaction-method { display: inline-block; font-size: 11px; padding: 4px 8px; background: rgba(37,99,235,0.1); color: var(--primary); border-radius: 4px; margin-top: 6px; }
-        .interaction-details { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; line-height: 1.6; }
-        .interaction-item.expanded .interaction-details { display: block; }
-        .detail-section { margin-bottom: 12px; }
-        .detail-label { font-weight: 600; color: var(--text); margin-bottom: 4px; }
-        .detail-content { color: var(--secondary); white-space: pre-wrap; word-break: break-word; max-height: 400px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-        .interaction-actions { display: none; margin-top: 12px; gap: 8px; }
-        .interaction-item.expanded .interaction-actions { display: flex; }
-        .empty-state { text-align: center; padding: 40px 20px; color: var(--secondary); }
-        .status-message { padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; display: none; }
-        .status-message.success { background: rgba(22,163,74,0.1); color: var(--success); display: block; }
-        .status-message.error { background: rgba(220,38,38,0.1); color: var(--danger); display: block; }
-        .interaction-item.selected { background: rgba(37,99,235,0.1); border-color: var(--primary); }
-        .tab-buttons { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 2px solid var(--border); }
-        .tab-btn { padding: 12px 20px; border: none; background: none; font-size: 14px; font-weight: 500; color: var(--secondary); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
-        .tab-btn.active { color: var(--text); border-bottom-color: var(--primary); }
-        .tab-btn:hover { color: var(--text); }
-        #loginModal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-        #loginModal.show { display: flex; }
-        .login-box { background: white; padding: 40px; border-radius: 12px; width: 320px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-        .login-box h2 { margin-bottom: 8px; }
-        .login-box p { color: var(--secondary); font-size: 14px; margin-bottom: 24px; }
-        .login-error { color: var(--danger); font-size: 13px; margin-bottom: 12px; display: none; }
-        .login-error.show { display: block; }
-        .logout-btn { padding: 8px 16px; background: var(--bg-light); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; cursor: pointer; color: var(--secondary); }
-        .logout-btn:hover { background: var(--danger); color: white; border-color: var(--danger); }
-        .export-btn { padding: 8px 16px; background: var(--bg-light); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; cursor: pointer; color: var(--secondary); margin-right: 8px; }
-        .export-btn:hover { background: var(--success); color: white; border-color: var(--success); }
-        .opp-card { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
-        .opp-card h3 { font-size: 16px; margin-bottom: 8px; color: var(--text); }
-        .opp-type { display: inline-block; font-size: 11px; padding: 3px 8px; border-radius: 4px; margin-bottom: 10px; font-weight: 600; }
-        .opp-type.need { background: rgba(37,99,235,0.1); color: var(--primary); }
-        .opp-type.pain { background: rgba(220,38,38,0.1); color: var(--danger); }
-        .opp-type.automation { background: rgba(22,163,74,0.1); color: var(--success); }
-        .opp-people { font-size: 12px; color: var(--secondary); margin-top: 8px; }
+        .btn-outline { background: white; color: var(--primary); border: 1px solid var(--primary); }
+        .btn-outline:hover { background: #eff6ff; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #15803d; }
+        .btn-ghost { background: none; color: var(--secondary); border: 1px solid var(--border); }
+        .btn-ghost:hover { background: var(--bg); }
+
+        .add-interaction-btn { width: 100%; padding: 10px; border: 2px dashed var(--border); border-radius: 6px; background: none; color: var(--secondary); font-size: 13px; cursor: pointer; margin-top: 8px; transition: all 0.15s; }
+        .add-interaction-btn:hover { border-color: var(--primary); color: var(--primary); background: #eff6ff; }
+
+        /* MODAL */
+        #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 500; display: flex; align-items: center; justify-content: center; }
+        #modal.hidden { display: none; }
+        .modal-box { background: white; border-radius: 12px; padding: 28px; width: 560px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .modal-box h2 { font-size: 18px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; color: var(--text); }
+        .form-group textarea { resize: vertical; min-height: 100px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+        /* ADD PERSON MODAL */
+        #addPersonModal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 500; display: flex; align-items: center; justify-content: center; }
+        #addPersonModal.hidden { display: none; }
+
+        /* OPPORTUNITIES */
+        .opp-card { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 14px; }
+        .opp-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+        .opp-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 12px; margin-bottom: 10px; font-weight: 600; }
+        .opp-need { background: rgba(37,99,235,0.1); color: var(--primary); }
+        .opp-pain { background: rgba(220,38,38,0.1); color: var(--danger); }
+        .opp-auto { background: rgba(22,163,74,0.1); color: var(--success); }
+        .opp-desc { font-size: 14px; color: var(--secondary); line-height: 1.6; margin-bottom: 8px; }
+        .opp-people { font-size: 12px; color: var(--secondary); }
+
+        /* STATUS */
+        .status-bar { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; display: none; }
+        .status-bar.show { display: block; }
+        .status-bar.success { background: #dcfce7; color: #166534; }
+        .status-bar.error { background: #fee2e2; color: #991b1b; }
+
+        /* EMPTY STATE */
+        .empty { text-align: center; padding: 30px; color: var(--secondary); font-size: 14px; }
+
+        /* LOADING */
         .loading { text-align: center; padding: 40px; color: var(--secondary); }
     </style>
 </head>
 <body>
-    <div id="loginModal">
-        <div class="login-box">
-            <h2>SOIC Tracker</h2>
-            <p>Enter your password to access the tracker</p>
-            <div class="login-error" id="loginError">Incorrect password. Please try again.</div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="passwordInput" placeholder="Enter password">
-            </div>
-            <button class="btn btn-primary" onclick="checkPassword()">Login</button>
+
+<!-- LOGIN -->
+<div id="loginOverlay">
+    <div class="login-box">
+        <h2>SOIC Tracker</h2>
+        <p>Enter your password to continue</p>
+        <div class="login-error" id="loginError">Incorrect password. Try again.</div>
+        <div class="form-group">
+            <input type="password" id="passwordInput" placeholder="Password" style="margin-bottom: 12px;">
+        </div>
+        <button class="btn btn-primary" style="width:100%;" onclick="login()">Login</button>
+    </div>
+</div>
+
+<!-- ADD INTERACTION MODAL -->
+<div id="modal" class="hidden">
+    <div class="modal-box">
+        <h2 id="modalTitle">Log Interaction</h2>
+        <div class="form-group">
+            <label>Contact Method *</label>
+            <select id="modalMethod">
+                <option value="">Select...</option>
+                <option value="email">Email</option>
+                <option value="call">Call</option>
+                <option value="chat">Chat</option>
+                <option value="meeting">In-person Meeting</option>
+                <option value="video">Video Call</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Date & Time *</label>
+            <input type="datetime-local" id="modalDateTime">
+        </div>
+        <div class="form-group">
+            <label>What was discussed *</label>
+            <textarea id="modalDiscussion" placeholder="Summary of the conversation..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Key decisions made</label>
+            <textarea id="modalDecisions" placeholder="Any decisions or agreements made..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Action items & next steps</label>
+            <textarea id="modalActionItems" placeholder="What needs to happen next?"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="submitInteraction()">Save Interaction</button>
         </div>
     </div>
+</div>
 
-    <div class="header">
-        <div>
-            <h1>SOIC Interaction Tracker</h1>
-            <p>Track conversations, decisions, and action items with your team</p>
+<!-- ADD PERSON MODAL -->
+<div id="addPersonModal" class="hidden">
+    <div class="modal-box" style="width:380px;">
+        <h2>Add Person</h2>
+        <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="newPersonName" placeholder="e.g. Jane Smith">
         </div>
-        <button class="export-btn" onclick="exportData()">Export Backup</button>
-        <button class="logout-btn" onclick="logout()">Logout</button>
-    </div>
-
-    <div class="tab-buttons">
-        <button class="tab-btn active" onclick="switchTab('log')">Log Interaction</button>
-        <button class="tab-btn" onclick="switchTab('people')">People Directory</button>
-        <button class="tab-btn" onclick="switchTab('opportunities')">Opportunities</button>
-    </div>
-
-    <!-- Log Interaction Tab -->
-    <div id="logTab">
-        <div class="container">
-            <div class="panel">
-                <h2>Log Interaction</h2>
-                <div id="statusMessage" class="status-message"></div>
-                <form id="interactionForm">
-                    <div class="form-group">
-                        <label>Person/Team Member *</label>
-                        <input type="text" id="personName" placeholder="Select or type name" list="personList" required>
-                        <datalist id="personList"></datalist>
-                    </div>
-                    <div class="form-group">
-                        <label>Contact Method *</label>
-                        <select id="contactMethod" required>
-                            <option value="">Select...</option>
-                            <option value="email">Email</option>
-                            <option value="call">Call</option>
-                            <option value="chat">Chat</option>
-                            <option value="meeting">In-person Meeting</option>
-                            <option value="video">Video Call</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Date & Time *</label>
-                        <input type="datetime-local" id="dateTime" required>
-                    </div>
-                    <div class="form-group">
-                        <label>What was discussed *</label>
-                        <textarea id="discussion" placeholder="Summary of the conversation..." required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Key decisions made</label>
-                        <textarea id="decisions" placeholder="Any decisions or agreements made..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Action items & next steps</label>
-                        <textarea id="actionItems" placeholder="What needs to happen next? Who owns what?"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Log Interaction</button>
-                </form>
-            </div>
-
-            <div class="panel">
-                <h2>Interactions</h2>
-                <div class="stats">
-                    <div class="stat">
-                        <div class="stat-value" id="totalCount">0</div>
-                        <div>Total logged</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-value" id="peopleCount">0</div>
-                        <div>People</div>
-                    </div>
-                </div>
-                <div class="filters">
-                    <input type="text" class="filter-input" id="searchFilter" placeholder="Search by name, discussion...">
-                    <select class="filter-input" id="methodFilter" style="flex: 0.5; min-width: auto;">
-                        <option value="">All methods</option>
-                        <option value="email">Email</option>
-                        <option value="call">Call</option>
-                        <option value="chat">Chat</option>
-                        <option value="meeting">Meeting</option>
-                        <option value="video">Video</option>
-                    </select>
-                </div>
-                <div class="interactions-list" id="interactionsList">
-                    <div class="empty-state"><p>No interactions logged yet</p></div>
-                </div>
-            </div>
+        <div class="form-group">
+            <label>Notes (optional)</label>
+            <textarea id="newPersonNotes" placeholder="Role, contact info, etc..." style="min-height:80px;"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeAddPersonModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="submitAddPerson()">Add Person</button>
         </div>
     </div>
+</div>
 
-    <!-- People Directory Tab -->
-    <div id="peopleTab" style="display: none;">
-        <div class="container">
-            <div class="panel">
-                <h2>People Directory</h2>
-                <div class="filters">
-                    <input type="text" class="filter-input" id="peopleSearch" placeholder="Search people..." style="flex: 1;">
-                </div>
-                <div class="interactions-list" id="peopleList" style="max-height: 800px;">
-                    <div class="empty-state"><p>No people added yet</p></div>
-                </div>
-            </div>
-            <div class="panel" id="personDetailsPanel" style="display: none;">
-                <h2 id="personName"></h2>
-                <div class="form-group">
-                    <label>Personal Details & Notes</label>
-                    <textarea id="personNotes" placeholder="Family, background, interests, preferences, important dates, etc..."></textarea>
-                </div>
-                <div id="personInteractionsSummary" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
-                    <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">All Interactions</h3>
-                    <div id="personInteractionsList" style="font-size: 13px; line-height: 1.6; max-height: 800px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 12px;"></div>
-                </div>
-                <div style="display: flex; gap: 12px; margin-top: 20px;">
-                    <button class="btn btn-primary" style="flex: 1;" onclick="savePersonNotes()">Save Notes</button>
-                    <button class="btn btn-sm btn-danger" onclick="closePerson()">Close</button>
-                </div>
-            </div>
-        </div>
+<!-- HEADER -->
+<header>
+    <div>
+        <h1>SOIC Tracker</h1>
+        <p>Track conversations, decisions, and action items with your team</p>
     </div>
-
-    <!-- Opportunities Tab -->
-    <div id="opportunitiesTab" style="display: none;">
-        <div class="panel" style="margin-bottom: 20px;">
-            <h2>Opportunities & Improvement Themes</h2>
-            <p style="color: var(--secondary); font-size: 14px;">Themes extracted from your team interactions</p>
-        </div>
-        <div id="opportunitiesList"></div>
+    <div class="header-btns">
+        <button class="btn btn-ghost btn-sm" onclick="exportBackup()">Export Backup</button>
+        <button class="btn btn-ghost btn-sm" onclick="logout()">Logout</button>
     </div>
+</header>
 
-    <script>
-        const API_URL = 'https://patient-lake-be1f.mike-chartrand.workers.dev';
-        const PASSWORD = 'Ssoic$$2026';
-        let allInteractions = [];
-        let currentPerson = null;
+<!-- TABS -->
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('people')">Team & Interactions</button>
+    <button class="tab-btn" onclick="switchTab('opportunities')">Opportunities</button>
+</div>
 
-        // Auth check
-        if (sessionStorage.getItem('soicAuthenticated') !== 'true') {
-            document.getElementById('loginModal').classList.add('show');
+<!-- PEOPLE TAB -->
+<div id="peopleTab" class="tab-content active">
+    <div id="statusBar" class="status-bar"></div>
+    <div class="people-header">
+        <h2>Team Directory</h2>
+        <button class="btn btn-primary btn-sm" onclick="openAddPersonModal()">+ Add Person</button>
+    </div>
+    <div id="peopleContainer">
+        <div class="loading">Loading...</div>
+    </div>
+</div>
+
+<!-- OPPORTUNITIES TAB -->
+<div id="opportunitiesTab" class="tab-content">
+    <div id="oppContainer">
+        <div class="loading">Loading opportunities...</div>
+    </div>
+</div>
+
+<script>
+    const API = "https://patient-lake-be1f.mike-chartrand.workers.dev";
+    const PASSWORD = "Ssoic$$2026";
+    const CACHE_KEY = "soic_v2_cache";
+    const PEOPLE_KEY = "soic_v2_people";
+
+    let allInteractions = [];
+    let allPeople = {};
+    let currentModalPerson = null;
+    let editingInteractionId = null;
+
+    const DEFAULT_PEOPLE = [
+        "Alejandro Lopez",
+        "Edgar Mauricio Aguilar",
+        "Jose Antonio Acevedo",
+        "Jose Esparza",
+        "Juan Andres Jimenez Rendon",
+        "Lars Von Borstel",
+        "Paola Munoz",
+        "Pedro",
+        "Sebastian Barrientos"
+    ];
+
+    // AUTH
+    if (sessionStorage.getItem("auth") !== "true") {
+        document.getElementById("loginOverlay").classList.remove("hidden");
+    } else {
+        document.getElementById("loginOverlay").classList.add("hidden");
+        init();
+    }
+
+    document.getElementById("passwordInput").addEventListener("keyup", function(e) {
+        if (e.key === "Enter") login();
+    });
+
+    function login() {
+        if (document.getElementById("passwordInput").value === PASSWORD) {
+            sessionStorage.setItem("auth", "true");
+            document.getElementById("loginOverlay").classList.add("hidden");
+            init();
         } else {
-            initApp();
+            document.getElementById("loginError").classList.add("show");
+            document.getElementById("passwordInput").value = "";
         }
+    }
 
-        document.getElementById('passwordInput').addEventListener('keyup', function(e) {
-            if (e.key === 'Enter') checkPassword();
-        });
+    function logout() {
+        sessionStorage.removeItem("auth");
+        location.reload();
+    }
 
-        function checkPassword() {
-            if (document.getElementById('passwordInput').value === PASSWORD) {
-                sessionStorage.setItem('soicAuthenticated', 'true');
-                document.getElementById('loginModal').classList.remove('show');
-                document.getElementById('passwordInput').value = '';
-                document.getElementById('loginError').classList.remove('show');
-                initApp();
-            } else {
-                document.getElementById('loginError').classList.add('show');
-                document.getElementById('passwordInput').value = '';
-                document.getElementById('passwordInput').focus();
-            }
-        }
+    // INIT
+    async function init() {
+        setDefaultDateTime();
+        await loadData();
+    }
 
-        async function exportData() {
+    function setDefaultDateTime() {
+        const now = new Date();
+        const offset = now.getTimezoneOffset();
+        const local = new Date(now.getTime() - offset * 60000);
+        document.getElementById("modalDateTime").value = local.toISOString().slice(0, 16);
+    }
+
+    // LOAD DATA
+    async function loadData() {
+        // Load from cache first
+        const cachedInt = sessionStorage.getItem(CACHE_KEY);
+        const cachedPeople = sessionStorage.getItem(PEOPLE_KEY);
+        if (cachedInt && cachedPeople) {
             try {
-                const intRes = await fetch(API_URL + '/interactions');
-                const interactions = await intRes.json();
-                const peopleRes = await fetch(API_URL + '/people');
-                const people = await peopleRes.json();
-
-                const backup = {
-                    exportedAt: new Date().toISOString(),
-                    interactions: interactions,
-                    peopleNotes: people
-                };
-
-                const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'soic-tracker-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-                a.click();
-                URL.revokeObjectURL(url);
-            } catch (e) {
-                alert('Export failed: ' + e.message);
-            }
+                allInteractions = JSON.parse(cachedInt);
+                allPeople = JSON.parse(cachedPeople);
+                renderPeople();
+            } catch(e) {}
         }
 
-        function logout() {
-            sessionStorage.removeItem('soicAuthenticated');
-            location.reload();
-        }
+        // Fetch fresh from API
+        try {
+            const [intRes, peopleRes] = await Promise.all([
+                fetch(API + "/interactions"),
+                fetch(API + "/people")
+            ]);
+            allInteractions = await intRes.json();
+            if (!Array.isArray(allInteractions)) allInteractions = [];
+            allPeople = await peopleRes.json();
+            if (typeof allPeople !== "object") allPeople = {};
 
-        async function initApp() {
-            initializeDateInput();
-            await loadData();
-        }
-
-        function initializeDateInput() {
-            const now = new Date();
-            const offset = now.getTimezoneOffset();
-            const local = new Date(now.getTime() - offset * 60 * 1000);
-            document.getElementById('dateTime').value = local.toISOString().slice(0, 16);
-        }
-
-        document.getElementById('interactionForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            addInteraction();
-        });
-
-        document.getElementById('searchFilter').addEventListener('input', filterInteractions);
-        document.getElementById('methodFilter').addEventListener('change', filterInteractions);
-        document.getElementById('peopleSearch').addEventListener('input', filterPeople);
-
-        function showStatus(message, type = 'success') {
-            const el = document.getElementById('statusMessage');
-            el.textContent = message;
-            el.className = 'status-message ' + type;
-            setTimeout(() => { el.className = 'status-message'; }, 3000);
-        }
-
-        async function loadData() {
-            const CACHE_KEY = 'soic_cache';
-
-            // Show loading state
-            const intList = document.getElementById('interactionsList');
-            const peopleListEl = document.getElementById('peopleList');
-            if (intList) intList.innerHTML = "<div class='empty-state'><p>Loading your data...</p></div>";
-            if (peopleListEl) peopleListEl.innerHTML = "<div class='empty-state'><p>Loading...</p></div>";
-
-            // Load from cache instantly if available
-            const cached = sessionStorage.getItem(CACHE_KEY);
-            if (cached) {
-                try {
-                    allInteractions = JSON.parse(cached);
-                    renderInteractions(allInteractions);
-                    updateStats(allInteractions);
-                    updatePersonList();
-                } catch(e) {
-                    sessionStorage.removeItem(CACHE_KEY);
-                }
-            }
-
-            // Always fetch fresh data from API in background
-            try {
-                const res = await fetch(API_URL + '/interactions');
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                const fresh = await res.json();
-                if (!Array.isArray(fresh)) throw new Error('Invalid response');
-                allInteractions = fresh;
-                sessionStorage.setItem(CACHE_KEY, JSON.stringify(allInteractions));
-                renderInteractions(allInteractions);
-                updateStats(allInteractions);
-                updatePersonList();
-            } catch (e) {
-                console.error('Error loading data:', e);
-                if (!cached) {
-                    showStatus('Error loading data: ' + e.message, 'error');
-                    allInteractions = [];
-                }
-            }
-        }
-
-        function updatePersonList() {
-            const people = [...new Set(allInteractions.map(i => i.personName))].sort();
-            const datalist = document.getElementById('personList');
-            datalist.innerHTML = people.map(p => '<option value="' + p + '">').join('');
-        }
-
-        function updateStats(interactions) {
-            document.getElementById('totalCount').textContent = interactions.length;
-            document.getElementById('peopleCount').textContent = new Set(interactions.map(i => i.personName)).size;
-        }
-
-        function renderInteractions(interactions) {
-            const container = document.getElementById('interactionsList');
-            if (interactions.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No interactions found</p></div>';
-                return;
-            }
-            const sorted = [...interactions].sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
-            container.innerHTML = sorted.map(function(i) {
-                const date = new Date(i.dateTime);
-                const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                const formattedTime = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                return '<div class="interaction-item" onclick="toggleExpand(this)">' +
-                    '<div class="interaction-header">' +
-                        '<div>' +
-                            '<div class="interaction-person">' + i.personName + '</div>' +
-                            '<div class="interaction-date">' + formattedDate + ' at ' + formattedTime + '</div>' +
-                            '<div class="interaction-method">' + i.contactMethod + '</div>' +
-                        '</div>' +
-                    '</div>' +
-                    '<div class="interaction-details">' +
-                        '<div class="detail-section"><div class="detail-label">Discussion</div><div class="detail-content">' + (i.discussion || '') + '</div></div>' +
-                        (i.decisions ? '<div class="detail-section"><div class="detail-label">Key Decisions</div><div class="detail-content">' + i.decisions + '</div></div>' : '') +
-                        (i.actionItems ? '<div class="detail-section"><div class="detail-label">Action Items</div><div class="detail-content">' + i.actionItems + '</div></div>' : '') +
-                        '<div class="interaction-actions"><button class="btn btn-sm btn-danger" onclick="deleteInteraction(event, this.dataset.id)" data-id="' + i.id + '">Delete</button></div>' +
-                    '</div>' +
-                '</div>';
-            }).join('');
-        }
-
-        function toggleExpand(element) {
-            document.querySelectorAll('.interaction-item.expanded').forEach(function(item) {
-                if (item !== element) item.classList.remove('expanded');
-            });
-            element.classList.toggle('expanded');
-        }
-
-        function filterInteractions() {
-            const search = document.getElementById('searchFilter').value.toLowerCase();
-            const method = document.getElementById('methodFilter').value;
-            const filtered = allInteractions.filter(function(i) {
-                const matchSearch = !search ||
-                    i.personName.toLowerCase().includes(search) ||
-                    (i.discussion || '').toLowerCase().includes(search) ||
-                    (i.decisions || '').toLowerCase().includes(search) ||
-                    (i.actionItems || '').toLowerCase().includes(search);
-                const matchMethod = !method || i.contactMethod === method;
-                return matchSearch && matchMethod;
-            });
-            renderInteractions(filtered);
-        }
-
-        async function addInteraction() {
-            const interaction = {
-                id: String(Date.now()),
-                personName: document.getElementById('personName').value.trim(),
-                contactMethod: document.getElementById('contactMethod').value,
-                dateTime: document.getElementById('dateTime').value,
-                discussion: document.getElementById('discussion').value.trim(),
-                decisions: document.getElementById('decisions').value.trim(),
-                actionItems: document.getElementById('actionItems').value.trim()
-            };
-
-            try {
-                const res = await fetch(API_URL + '/interactions', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(interaction)
-                });
-                if (!res.ok) throw new Error('Save failed: ' + res.status);
-                allInteractions.push(interaction);
-                sessionStorage.setItem('soic_cache', JSON.stringify(allInteractions));
-                document.getElementById('interactionForm').reset();
-                initializeDateInput();
-                renderInteractions(allInteractions);
-                updateStats(allInteractions);
-                updatePersonList();
-                showStatus('Interaction logged successfully!');
-            } catch (e) {
-                showStatus('Error saving: ' + e.message, 'error');
-            }
-        }
-
-        async function deleteInteraction(event, id) {
-            event.stopPropagation();
-            if (!confirm('Delete this interaction?')) return;
-            try {
-                const res = await fetch(API_URL + '/interactions/' + id, { method: 'DELETE' });
-                if (!res.ok) throw new Error('Delete failed');
-                allInteractions = allInteractions.filter(function(i) { return i.id !== id && String(i.id) !== String(id); });
-                sessionStorage.setItem('soic_cache', JSON.stringify(allInteractions));
-                renderInteractions(allInteractions);
-                updateStats(allInteractions);
-                updatePersonList();
-                showStatus('Interaction deleted');
-            } catch (e) {
-                showStatus('Error deleting: ' + e.message, 'error');
-            }
-        }
-
-        function switchTab(tab) {
-            document.getElementById('logTab').style.display = 'none';
-            document.getElementById('peopleTab').style.display = 'none';
-            document.getElementById('opportunitiesTab').style.display = 'none';
-            document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
-
-            if (tab === 'log') {
-                document.getElementById('logTab').style.display = '';
-                document.querySelectorAll('.tab-btn')[0].classList.add('active');
-            } else if (tab === 'people') {
-                document.getElementById('peopleTab').style.display = '';
-                document.querySelectorAll('.tab-btn')[1].classList.add('active');
-                loadPeopleDirectory();
-            } else if (tab === 'opportunities') {
-                document.getElementById('opportunitiesTab').style.display = '';
-                document.querySelectorAll('.tab-btn')[2].classList.add('active');
-                loadOpportunities();
-            }
-        }
-
-        async function loadPeopleDirectory() {
-            const people = [...new Set(allInteractions.map(function(i) { return i.personName; }))].sort();
-            const container = document.getElementById('peopleList');
-            if (people.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No people added yet</p></div>';
-                return;
-            }
-            try {
-                const res = await fetch(API_URL + '/people');
-                const peopleNotes = await res.json();
-                container.innerHTML = people.map(function(person) {
-                    const ints = allInteractions.filter(function(i) { return i.personName === person; });
-                    const notes = peopleNotes[person] || '';
-                    const last = ints.sort(function(a, b) { return new Date(b.dateTime) - new Date(a.dateTime); })[0];
-                    const lastDate = last ? new Date(last.dateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Never';
-                    return '<div class="interaction-item" data-person="' + person.replace(/"/g, '&quot;') + '" onclick="openPerson(this.dataset.person)">' +
-                        '<div class="interaction-header">' +
-                            '<div>' +
-                                '<div class="interaction-person">' + person + '</div>' +
-                                '<div class="interaction-date">Last contacted: ' + lastDate + '</div>' +
-                                (notes ? '<div style="font-size:12px;color:var(--secondary);margin-top:6px;font-style:italic;">Notes on file</div>' : '') +
-                            '</div>' +
-                            '<div style="font-size:12px;color:var(--secondary);">' + ints.length + ' interaction' + (ints.length !== 1 ? 's' : '') + '</div>' +
-                        '</div>' +
-                    '</div>';
-                }).join('');
-            } catch (e) {
-                console.error('Error loading people:', e);
-            }
-        }
-
-        async function filterPeople() {
-            const search = document.getElementById('peopleSearch').value.toLowerCase();
-            const people = [...new Set(allInteractions.map(function(i) { return i.personName; }))].sort().filter(function(p) { return p.toLowerCase().includes(search); });
-            const container = document.getElementById('peopleList');
-            if (people.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No people found</p></div>';
-                return;
-            }
-            try {
-                const res = await fetch(API_URL + '/people');
-                const peopleNotes = await res.json();
-                container.innerHTML = people.map(function(person) {
-                    const ints = allInteractions.filter(function(i) { return i.personName === person; });
-                    const notes = peopleNotes[person] || '';
-                    const last = ints.sort(function(a, b) { return new Date(b.dateTime) - new Date(a.dateTime); })[0];
-                    const lastDate = last ? new Date(last.dateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Never';
-                    return '<div class="interaction-item" data-person="' + person.replace(/"/g, '&quot;') + '" onclick="openPerson(this.dataset.person)">' +
-                        '<div class="interaction-header">' +
-                            '<div>' +
-                                '<div class="interaction-person">' + person + '</div>' +
-                                '<div class="interaction-date">Last contacted: ' + lastDate + '</div>' +
-                                (notes ? '<div style="font-size:12px;color:var(--secondary);margin-top:6px;font-style:italic;">Notes on file</div>' : '') +
-                            '</div>' +
-                            '<div style="font-size:12px;color:var(--secondary);">' + ints.length + ' interaction' + (ints.length !== 1 ? 's' : '') + '</div>' +
-                        '</div>' +
-                    '</div>';
-                }).join('');
-            } catch (e) {
-                console.error('Error filtering people:', e);
-            }
-        }
-
-        async function openPerson(person) {
-            currentPerson = person;
-            const ints = allInteractions.filter(function(i) { return i.personName === person; }).sort(function(a, b) { return new Date(b.dateTime) - new Date(a.dateTime); });
-            document.querySelectorAll('#peopleList .interaction-item').forEach(function(item) {
-                item.classList.remove('selected');
-                if (item.querySelector('.interaction-person') && item.querySelector('.interaction-person').textContent === person) {
-                    item.classList.add('selected');
+            // Ensure default people exist
+            DEFAULT_PEOPLE.forEach(function(name) {
+                if (!allPeople.hasOwnProperty(name)) {
+                    allPeople[name] = "";
                 }
             });
-            try {
-                const res = await fetch(API_URL + '/people');
-                const peopleNotes = await res.json();
-                document.getElementById('personName').textContent = person;
-                document.getElementById('personNotes').value = peopleNotes[person] || '';
-                document.getElementById('personInteractionsList').innerHTML = ints.map(function(i) {
-                    const date = new Date(i.dateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                    return '<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);" data-id="' + i.id + '">' +
-                        '<div style="font-weight:600;color:var(--text);margin-bottom:6px;">' + date + ' - ' + i.contactMethod + '</div>' +
-                        '<textarea style="width:100%;min-height:120px;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;color:var(--secondary);resize:vertical;white-space:pre-wrap;">' + (i.discussion || '') + '</textarea>' +
-                        '<button onclick="saveInteractionEdit(this)" style="margin-top:6px;padding:6px 14px;background:var(--primary);color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Save</button>' +
-                        '<span style="margin-left:10px;font-size:12px;color:var(--success);display:none;" class="save-confirm">✓ Saved</span>' +
-                    '</div>';
-                }).join('');
-                document.getElementById('personDetailsPanel').style.display = '';
-            } catch (e) {
-                console.error('Error opening person:', e);
+
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify(allInteractions));
+            sessionStorage.setItem(PEOPLE_KEY, JSON.stringify(allPeople));
+            renderPeople();
+        } catch(e) {
+            if (!cachedInt) {
+                document.getElementById("peopleContainer").innerHTML = "<div class=\"empty\">Error loading data. Please refresh.</div>";
             }
         }
+    }
 
-        async function saveInteractionEdit(btn) {
-            const container = btn.closest('[data-id]');
-            const id = container.dataset.id;
-            const textarea = container.querySelector('textarea');
-            const confirm = container.querySelector('.save-confirm');
-            const discussion = textarea.value;
+    // RENDER PEOPLE
+    function renderPeople() {
+        const container = document.getElementById("peopleContainer");
+        const names = Object.keys(allPeople).sort();
 
-            try {
-                const interaction = allInteractions.find(function(i) { return String(i.id) === String(id); });
-                const res = await fetch(API_URL + '/interactions/' + id, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        discussion: discussion,
-                        decisions: interaction ? interaction.decisions : '',
-                        actionItems: interaction ? interaction.actionItems : ''
-                    })
-                });
-                if (!res.ok) throw new Error('Save failed');
-                if (interaction) interaction.discussion = discussion;
-                sessionStorage.setItem('soic_cache', JSON.stringify(allInteractions));
-                confirm.style.display = 'inline';
-                setTimeout(function() { confirm.style.display = 'none'; }, 2000);
-            } catch (e) {
-                alert('Error saving: ' + e.message);
-            }
+        if (names.length === 0) {
+            container.innerHTML = "<div class=\"empty\">No people yet. Click + Add Person to get started.</div>";
+            return;
         }
 
-        function closePerson() {
-            currentPerson = null;
-            document.getElementById('personDetailsPanel').style.display = 'none';
-            document.querySelectorAll('#peopleList .interaction-item').forEach(function(item) { item.classList.remove('selected'); });
+        container.innerHTML = names.map(function(name) {
+            const ints = allInteractions.filter(function(i) { return i.personName === name; })
+                .sort(function(a, b) { return new Date(b.dateTime) - new Date(a.dateTime); });
+            const lastDate = ints.length > 0 ? new Date(ints[0].dateTime).toLocaleDateString("en-US", {month: "short", day: "numeric"}) : "No interactions yet";
+            const notes = allPeople[name] || "";
+
+            return "<div class=\"person-card\" id=\"person-" + safeid(name) + "\">" +
+                "<div class=\"person-header\" onclick=\"togglePerson('" + safeid(name) + "')\">" +
+                    "<div>" +
+                        "<div class=\"person-name\">" + name + "</div>" +
+                        "<div class=\"person-meta\">" + ints.length + " interaction" + (ints.length !== 1 ? "s" : "") + " &middot; Last: " + lastDate + "</div>" +
+                    "</div>" +
+                    "<span class=\"person-chevron\">&#9660;</span>" +
+                "</div>" +
+                "<div class=\"person-body\" id=\"body-" + safeid(name) + "\">" +
+                    "<div class=\"person-notes-label\">Notes</div>" +
+                    "<textarea class=\"person-notes\" id=\"notes-" + safeid(name) + "\" placeholder=\"Role, contact info, background...\">" + escHtml(notes) + "</textarea>" +
+                    "<div class=\"notes-save-row\">" +
+                        "<button class=\"btn btn-sm btn-outline\" onclick=\"saveNotes('" + safeid(name) + "', '" + escAttr(name) + "')\">Save Notes</button>" +
+                        "<span class=\"save-confirm\" id=\"notes-confirm-" + safeid(name) + "\"> ✓ Saved</span>" +
+                    "</div>" +
+                    "<div class=\"interactions-label\">Interactions</div>" +
+                    (ints.length === 0 ? "<div class=\"empty\" style=\"padding:16px 0;\">No interactions yet</div>" :
+                        ints.map(function(i) { return renderInteractionCard(i); }).join("")) +
+                    "<button class=\"add-interaction-btn\" onclick=\"openModal('" + escAttr(name) + "')\">+ Add Interaction</button>" +
+                "</div>" +
+            "</div>";
+        }).join("");
+    }
+
+    function renderInteractionCard(i) {
+        const date = new Date(i.dateTime).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric"});
+        const time = new Date(i.dateTime).toLocaleTimeString("en-US", {hour: "2-digit", minute: "2-digit"});
+        return "<div class=\"interaction-card\" id=\"int-" + i.id + "\">" +
+            "<div class=\"interaction-header\" onclick=\"toggleInteraction('" + i.id + "')\">"+
+                "<div style=\"display:flex;align-items:center;gap:10px;\">" +
+                    "<span class=\"interaction-title\">" + date + " at " + time + "</span>" +
+                    "<span class=\"interaction-method\">" + i.contactMethod + "</span>" +
+                "</div>" +
+                "<span class=\"interaction-chevron\">&#9660;</span>" +
+            "</div>" +
+            "<div class=\"interaction-body\" id=\"intbody-" + i.id + "\">" +
+                "<div class=\"interaction-field-label\">Discussion</div>" +
+                "<textarea class=\"interaction-textarea\" id=\"disc-" + i.id + "\">" + escHtml(i.discussion || "") + "</textarea>" +
+                "<div class=\"interaction-field-label\">Key Decisions</div>" +
+                "<textarea class=\"interaction-textarea\" style=\"min-height:60px;\" id=\"dec-" + i.id + "\">" + escHtml(i.decisions || "") + "</textarea>" +
+                "<div class=\"interaction-field-label\">Action Items</div>" +
+                "<textarea class=\"interaction-textarea\" style=\"min-height:60px;\" id=\"act-" + i.id + "\">" + escHtml(i.actionItems || "") + "</textarea>" +
+                "<div class=\"interaction-actions\">" +
+                    "<button class=\"btn btn-danger btn-sm\" onclick=\"deleteInteraction('" + i.id + "')\">Delete</button>" +
+                    "<div style=\"display:flex;align-items:center;gap:10px;\">" +
+                        "<span class=\"save-confirm\" id=\"int-confirm-" + i.id + "\">✓ Saved</span>" +
+                        "<button class=\"btn btn-primary btn-sm\" onclick=\"saveInteraction('" + i.id + "')\">Save Changes</button>" +
+                    "</div>" +
+                "</div>" +
+            "</div>" +
+        "</div>";
+    }
+
+    // TOGGLE ACCORDIONS
+    function togglePerson(safeName) {
+        const header = document.querySelector("#person-" + safeName + " .person-header");
+        const body = document.getElementById("body-" + safeName);
+        header.classList.toggle("open");
+        body.classList.toggle("open");
+    }
+
+    function toggleInteraction(id) {
+        const header = document.querySelector("#int-" + id + " .interaction-header");
+        const body = document.getElementById("intbody-" + id);
+        header.classList.toggle("open");
+        body.classList.toggle("open");
+    }
+
+    // SAVE NOTES
+    async function saveNotes(safeName, name) {
+        const notes = document.getElementById("notes-" + safeName).value;
+        allPeople[name] = notes;
+        try {
+            await fetch(API + "/people", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(allPeople)
+            });
+            sessionStorage.setItem(PEOPLE_KEY, JSON.stringify(allPeople));
+            const confirm = document.getElementById("notes-confirm-" + safeName);
+            confirm.classList.add("show");
+            setTimeout(function() { confirm.classList.remove("show"); }, 2000);
+        } catch(e) {
+            showStatus("Error saving notes: " + e.message, "error");
+        }
+    }
+
+    // SAVE INTERACTION EDITS
+    async function saveInteraction(id) {
+        const discussion = document.getElementById("disc-" + id).value;
+        const decisions = document.getElementById("dec-" + id).value;
+        const actionItems = document.getElementById("act-" + id).value;
+
+        try {
+            const res = await fetch(API + "/interactions/" + id, {
+                method: "PUT",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({discussion: discussion, decisions: decisions, actionItems: actionItems})
+            });
+            if (!res.ok) throw new Error("Save failed");
+
+            const int = allInteractions.find(function(i) { return String(i.id) === String(id); });
+            if (int) { int.discussion = discussion; int.decisions = decisions; int.actionItems = actionItems; }
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify(allInteractions));
+
+            const confirm = document.getElementById("int-confirm-" + id);
+            confirm.classList.add("show");
+            setTimeout(function() { confirm.classList.remove("show"); }, 2000);
+        } catch(e) {
+            showStatus("Error saving: " + e.message, "error");
+        }
+    }
+
+    // DELETE INTERACTION
+    async function deleteInteraction(id) {
+        if (!confirm("Delete this interaction?")) return;
+        try {
+            const res = await fetch(API + "/interactions/" + id, {method: "DELETE"});
+            if (!res.ok) throw new Error("Delete failed");
+            allInteractions = allInteractions.filter(function(i) { return String(i.id) !== String(id); });
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify(allInteractions));
+            renderPeople();
+        } catch(e) {
+            showStatus("Error deleting: " + e.message, "error");
+        }
+    }
+
+    // ADD INTERACTION MODAL
+    function openModal(personName) {
+        currentModalPerson = personName;
+        editingInteractionId = null;
+        document.getElementById("modalTitle").textContent = "Log Interaction — " + personName;
+        document.getElementById("modalMethod").value = "";
+        document.getElementById("modalDiscussion").value = "";
+        document.getElementById("modalDecisions").value = "";
+        document.getElementById("modalActionItems").value = "";
+        setDefaultDateTime();
+        document.getElementById("modal").classList.remove("hidden");
+    }
+
+    function closeModal() {
+        document.getElementById("modal").classList.add("hidden");
+        currentModalPerson = null;
+    }
+
+    async function submitInteraction() {
+        const method = document.getElementById("modalMethod").value;
+        const dateTime = document.getElementById("modalDateTime").value;
+        const discussion = document.getElementById("modalDiscussion").value.trim();
+
+        if (!method || !dateTime || !discussion) {
+            alert("Please fill in Contact Method, Date/Time, and Discussion.");
+            return;
         }
 
-        async function savePersonNotes() {
-            try {
-                const notes = document.getElementById('personNotes').value.trim();
-                const res = await fetch(API_URL + '/people');
-                const peopleNotes = await res.json();
-                if (notes) { peopleNotes[currentPerson] = notes; } else { delete peopleNotes[currentPerson]; }
-                await fetch(API_URL + '/people', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(peopleNotes)
-                });
-                await loadPeopleDirectory();
-                showStatus('Notes saved!');
-            } catch (e) {
-                showStatus('Error saving notes: ' + e.message, 'error');
-            }
+        const interaction = {
+            id: String(Date.now()),
+            personName: currentModalPerson,
+            contactMethod: method,
+            dateTime: dateTime,
+            discussion: discussion,
+            decisions: document.getElementById("modalDecisions").value.trim(),
+            actionItems: document.getElementById("modalActionItems").value.trim()
+        };
+
+        try {
+            const res = await fetch(API + "/interactions", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(interaction)
+            });
+            if (!res.ok) throw new Error("Save failed");
+            allInteractions.push(interaction);
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify(allInteractions));
+            closeModal();
+            renderPeople();
+            // Re-open the person accordion
+            setTimeout(function() {
+                const safeName = safeid(currentModalPerson || interaction.personName);
+                const header = document.querySelector("#person-" + safeid(interaction.personName) + " .person-header");
+                const body = document.getElementById("body-" + safeid(interaction.personName));
+                if (header && !header.classList.contains("open")) {
+                    header.classList.add("open");
+                    body.classList.add("open");
+                }
+            }, 50);
+            showStatus("Interaction logged!", "success");
+        } catch(e) {
+            showStatus("Error saving: " + e.message, "error");
+        }
+    }
+
+    // ADD PERSON
+    function openAddPersonModal() {
+        document.getElementById("newPersonName").value = "";
+        document.getElementById("newPersonNotes").value = "";
+        document.getElementById("addPersonModal").classList.remove("hidden");
+        setTimeout(function() { document.getElementById("newPersonName").focus(); }, 50);
+    }
+
+    function closeAddPersonModal() {
+        document.getElementById("addPersonModal").classList.add("hidden");
+    }
+
+    async function submitAddPerson() {
+        const name = document.getElementById("newPersonName").value.trim();
+        if (!name) { alert("Please enter a name."); return; }
+        if (allPeople.hasOwnProperty(name)) { alert("This person already exists."); return; }
+
+        const notes = document.getElementById("newPersonNotes").value.trim();
+        allPeople[name] = notes;
+
+        try {
+            await fetch(API + "/people", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(allPeople)
+            });
+            sessionStorage.setItem(PEOPLE_KEY, JSON.stringify(allPeople));
+            closeAddPersonModal();
+            renderPeople();
+            showStatus(name + " added!", "success");
+        } catch(e) {
+            showStatus("Error adding person: " + e.message, "error");
+        }
+    }
+
+    // TABS
+    function switchTab(tab) {
+        document.querySelectorAll(".tab-content").forEach(function(el) { el.classList.remove("active"); });
+        document.querySelectorAll(".tab-btn").forEach(function(el) { el.classList.remove("active"); });
+        if (tab === "people") {
+            document.getElementById("peopleTab").classList.add("active");
+            document.querySelectorAll(".tab-btn")[0].classList.add("active");
+        } else {
+            document.getElementById("opportunitiesTab").classList.add("active");
+            document.querySelectorAll(".tab-btn")[1].classList.add("active");
+            renderOpportunities();
+        }
+    }
+
+    // OPPORTUNITIES
+    function renderOpportunities() {
+        const themes = [
+            {title: "Automated Pricing Tool", badge: "opp-auto", label: "AUTOMATION", keywords: ["pric", "cost", "percentages", "convoluted"], desc: "Pricing is manual and complex. An automated tool capturing freight, insurance, and margins would save time and reduce errors."},
+            {title: "Order & Customer Visibility Platform", badge: "opp-need", label: "NEED", keywords: ["visibility", "order status", "updates", "tracking", "where orders are"], desc: "Sales team needs real-time visibility into order status without relying on email chains."},
+            {title: "Supply-Demand Matching", badge: "opp-pain", label: "PAIN POINT", keywords: ["supply", "demand", "buyer", "tonnage", "available"], desc: "When supply is available but no buyer is identified, revenue is lost."},
+            {title: "Centralized Customer & Product Database", badge: "opp-need", label: "NEED", keywords: ["all the info", "same place", "database", "centralized", "customer needs", "specifications"], desc: "Information is scattered. A single source of truth for customers, products and specs is needed."},
+            {title: "Market Pricing & Import Data", badge: "opp-need", label: "NEED", keywords: ["data sur", "market data", "import data", "what people are paying", "gsm"], desc: "Access to market intelligence on competitor pricing and product specs would improve decisions."},
+            {title: "Delivery Reliability", badge: "opp-pain", label: "PAIN POINT", keywords: ["deliver", "late", "mill", "carman", "operations", "on time"], desc: "Late deliveries are a recurring issue. Both sales staff and clients lack operational visibility."}
+        ];
+
+        const container = document.getElementById("oppContainer");
+        const results = themes.map(function(t) {
+            const mentions = allInteractions.filter(function(i) {
+                const text = ((i.discussion || "") + " " + (i.decisions || "")).toLowerCase();
+                return t.keywords.some(function(kw) { return text.includes(kw); });
+            });
+            const people = [...new Set(mentions.map(function(i) { return i.personName; }))];
+            return {theme: t, count: mentions.length, people: people};
+        }).filter(function(r) { return r.count > 0; }).sort(function(a, b) { return b.count - a.count; });
+
+        if (results.length === 0) {
+            container.innerHTML = "<div class=\"empty\">Log more interactions to see opportunities emerge.</div>";
+            return;
         }
 
-        function loadOpportunities() {
-            const themes = [
-                { title: 'Order & Customer Visibility Platform', type: 'need', keywords: ['visibility', 'order status', 'updates', 'tracking'], description: 'Sales team needs real-time visibility into order status and customer updates without relying on email chains.' },
-                { title: 'Automated Pricing Tool', type: 'automation', keywords: ['pricing', 'price', 'cost', 'convoluted', 'percentages'], description: 'Pricing is manual and complex. An automated tool that captures freight, insurance, profit margins would save time and reduce errors.' },
-                { title: 'Centralized Customer & Product Database', type: 'need', keywords: ['all the info', 'same place', 'database', 'centralized', 'customer needs'], description: 'Information is scattered. A single source of truth for customers, products, specifications and history is needed.' },
-                { title: 'Supply-Demand Matching', type: 'pain', keywords: ['supply', 'demand', 'buyer', 'tonnage', 'available'], description: 'When supply is available but no buyer is identified, revenue is lost. A matching system could solve this.' },
-                { title: 'Market Pricing & Import Data', type: 'need', keywords: ['data sur', 'market data', 'import data', 'what people are paying', 'gsm'], description: 'Access to market intelligence on what competitors are paying and product specifications would improve sales decisions.' },
-                { title: 'Delivery Reliability & Operations Visibility', type: 'pain', keywords: ['deliver', 'late', 'mill', 'carman', 'operations'], description: 'Late deliveries are a known issue. Both sales staff and clients lack visibility into what is happening operationally.' }
-            ];
+        container.innerHTML = "<h2 style=\"font-size:18px;font-weight:600;margin-bottom:16px;\">Top Opportunities</h2>" +
+            results.map(function(r) {
+                return "<div class=\"opp-card\">" +
+                    "<div class=\"opp-title\">" + r.theme.title + "</div>" +
+                    "<span class=\"opp-badge " + r.theme.badge + "\">" + r.theme.label + "</span>" +
+                    "<div class=\"opp-desc\">" + r.theme.desc + "</div>" +
+                    "<div class=\"opp-people\">Mentioned in " + r.count + " interaction" + (r.count !== 1 ? "s" : "") + " &mdash; " + r.people.join(", ") + "</div>" +
+                "</div>";
+            }).join("");
+    }
 
-            const container = document.getElementById('opportunitiesList');
-            const results = themes.map(function(theme) {
-                const mentions = allInteractions.filter(function(i) {
-                    const text = ((i.discussion || '') + ' ' + (i.decisions || '')).toLowerCase();
-                    return theme.keywords.some(function(kw) { return text.includes(kw); });
-                });
-                const people = [...new Set(mentions.map(function(i) { return i.personName; }))];
-                return { theme: theme, count: mentions.length, people: people };
-            }).filter(function(r) { return r.count > 0; }).sort(function(a, b) { return b.count - a.count; });
-
-            if (results.length === 0) {
-                container.innerHTML = '<div class="panel"><div class="empty-state"><p>Log interactions to see opportunities emerge</p></div></div>';
-                return;
-            }
-
-            container.innerHTML = results.map(function(r) {
-                return '<div class="opp-card">' +
-                    '<h3>' + r.theme.title + '</h3>' +
-                    '<span class="opp-type ' + r.theme.type + '">' + r.theme.type.toUpperCase() + '</span>' +
-                    '<p style="font-size:14px;color:var(--secondary);line-height:1.6;">' + r.theme.description + '</p>' +
-                    '<div class="opp-people">Mentioned by ' + r.count + ' interaction' + (r.count !== 1 ? 's' : '') + ' across: ' + r.people.join(', ') + '</div>' +
-                '</div>';
-            }).join('');
+    // EXPORT
+    async function exportBackup() {
+        try {
+            const backup = {exportedAt: new Date().toISOString(), interactions: allInteractions, peopleNotes: allPeople};
+            const blob = new Blob([JSON.stringify(backup, null, 2)], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "soic-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch(e) {
+            showStatus("Export failed: " + e.message, "error");
         }
-    </script>
+    }
+
+    // HELPERS
+    function safeid(name) {
+        return name.replace(/[^a-zA-Z0-9]/g, "_");
+    }
+
+    function escHtml(str) {
+        return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function escAttr(str) {
+        return String(str).replace(/'/g, "\'").replace(/"/g, "&quot;");
+    }
+
+    function showStatus(msg, type) {
+        const bar = document.getElementById("statusBar");
+        bar.textContent = msg;
+        bar.className = "status-bar " + type + " show";
+        setTimeout(function() { bar.classList.remove("show"); }, 3000);
+    }
+
+    document.getElementById("newPersonName").addEventListener("keyup", function(e) {
+        if (e.key === "Enter") submitAddPerson();
+    });
+</script>
 </body>
 </html>
