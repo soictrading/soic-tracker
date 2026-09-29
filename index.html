@@ -69,6 +69,8 @@
         .login-error.show { display: block; }
         .logout-btn { padding: 8px 16px; background: var(--bg-light); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; cursor: pointer; color: var(--secondary); }
         .logout-btn:hover { background: var(--danger); color: white; border-color: var(--danger); }
+        .export-btn { padding: 8px 16px; background: var(--bg-light); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; cursor: pointer; color: var(--secondary); margin-right: 8px; }
+        .export-btn:hover { background: var(--success); color: white; border-color: var(--success); }
         .opp-card { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px; }
         .opp-card h3 { font-size: 16px; margin-bottom: 8px; color: var(--text); }
         .opp-type { display: inline-block; font-size: 11px; padding: 3px 8px; border-radius: 4px; margin-bottom: 10px; font-weight: 600; }
@@ -98,6 +100,7 @@
             <h1>SOIC Interaction Tracker</h1>
             <p>Track conversations, decisions, and action items with your team</p>
         </div>
+        <button class="export-btn" onclick="exportData()">Export Backup</button>
         <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
 
@@ -247,6 +250,31 @@
                 document.getElementById('loginError').classList.add('show');
                 document.getElementById('passwordInput').value = '';
                 document.getElementById('passwordInput').focus();
+            }
+        }
+
+        async function exportData() {
+            try {
+                const intRes = await fetch(API_URL + '/interactions');
+                const interactions = await intRes.json();
+                const peopleRes = await fetch(API_URL + '/people');
+                const people = await peopleRes.json();
+
+                const backup = {
+                    exportedAt: new Date().toISOString(),
+                    interactions: interactions,
+                    peopleNotes: people
+                };
+
+                const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'soic-tracker-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                alert('Export failed: ' + e.message);
             }
         }
 
@@ -508,7 +536,7 @@
                     const date = new Date(i.dateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                     return '<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">' +
                         '<div style="font-weight:600;color:var(--text);">' + date + ' - ' + i.contactMethod + '</div>' +
-                        '<div style="color:var(--secondary);white-space:pre-wrap;margin-top:4px;max-height:150px;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:4px;padding:8px;">' + (i.discussion || '') + '</div>' +
+                        '<div style="color:var(--secondary);white-space:pre-wrap;margin-top:4px;max-height:400px;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:4px;padding:8px;">' + (i.discussion || '') + '</div>' +
                     '</div>';
                 }).join('');
                 document.getElementById('personDetailsPanel').style.display = '';
